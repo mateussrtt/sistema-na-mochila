@@ -1,0 +1,16 @@
+[project]
+name = "na-mochila-api"
+version = "0.1.0"
+description = "API do sistema de gestão financeira do Na Mochila"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
