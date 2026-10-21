@@ -17,3 +17,14 @@ def test_health_conecta_no_banco():
 
 def test_documentacao_da_api_disponivel():
     assert client.get("/docs").status_code == 200
+
+
+def test_cors_libera_o_frontend_local():
+    resposta = client.options(
+        "/api/health",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert resposta.headers["access-control-allow-origin"] == "http://localhost:5173"
