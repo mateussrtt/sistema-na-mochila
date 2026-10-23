@@ -1,8 +1,28 @@
+import { ChevronRight, UserRound, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 
 import { API_URL, apiGet, type Health } from '../api/client'
 
 type Estado = { tipo: 'carregando' } | { tipo: 'ok'; dados: Health } | { tipo: 'erro' }
+
+function saudacao(): string {
+  const hora = new Date().getHours()
+  if (hora < 12) return 'Bom dia'
+  if (hora < 18) return 'Boa tarde'
+  return 'Boa noite'
+}
+
+function Indicador({ rotulo, ok, texto }: { rotulo: string; ok: boolean | null; texto: string }) {
+  const classe = ok === null ? 'consultando' : ok ? 'ok' : 'falha'
+  return (
+    <li className="indicador">
+      <span className={`ponto ponto-${classe}`} aria-hidden="true" />
+      <span>{rotulo}</span>
+      <strong>{texto}</strong>
+    </li>
+  )
+}
 
 export default function Inicio() {
   const [estado, setEstado] = useState<Estado>({ tipo: 'carregando' })
@@ -20,30 +40,68 @@ export default function Inicio() {
     return () => controle.abort()
   }, [])
 
-  return (
-    <section>
-      <h1>Gestão financeira do Na Mochila</h1>
-      <p>
-        Base do sistema no ar. As telas de alunos, mensalidades, despesas, receitas e caixa
-        serão construídas nos próximos ciclos.
-      </p>
+  const apiOk = estado.tipo === 'carregando' ? null : estado.tipo === 'ok'
+  const bancoOk =
+    estado.tipo === 'carregando' ? null : estado.tipo === 'ok' && estado.dados.banco === 'ok'
 
-      <div className="cartao">
-        <h2>Situação da API</h2>
-        {estado.tipo === 'carregando' && <p>Consultando {API_URL}…</p>}
+  return (
+    <section className="pagina">
+      <header className="pagina-cabecalho">
+        <h1>{saudacao()}</h1>
+        <p>
+          Este é o painel financeiro do Na Mochila. O cadastro de alunos e responsáveis já está
+          disponível; mensalidades, despesas e caixa chegam nas próximas versões.
+        </p>
+      </header>
+
+      <ul className="atalhos">
+        <li>
+          <Link to="/alunos" className="atalho">
+            <span className="atalho-icone">
+              <Users size={22} aria-hidden="true" />
+            </span>
+            <span className="pessoa-texto">
+              <strong>Alunos</strong>
+              <span>Cadastre, busque e edite os alunos matriculados</span>
+            </span>
+            <ChevronRight size={18} className="linha-seta" aria-hidden="true" />
+          </Link>
+        </li>
+        <li>
+          <Link to="/alunos/responsaveis" className="atalho">
+            <span className="atalho-icone">
+              <UserRound size={22} aria-hidden="true" />
+            </span>
+            <span className="pessoa-texto">
+              <strong>Responsáveis</strong>
+              <span>Mantenha telefones e e-mails de contato em dia</span>
+            </span>
+            <ChevronRight size={18} className="linha-seta" aria-hidden="true" />
+          </Link>
+        </li>
+      </ul>
+
+      <section className="situacao" aria-labelledby="situacao-titulo">
+        <h2 id="situacao-titulo">Situação do sistema</h2>
+        <ul>
+          <Indicador
+            rotulo="API"
+            ok={apiOk}
+            texto={apiOk === null ? 'consultando…' : apiOk ? 'no ar' : 'sem resposta'}
+          />
+          <Indicador
+            rotulo="Banco de dados"
+            ok={bancoOk}
+            texto={bancoOk === null ? 'consultando…' : bancoOk ? 'conectado' : 'indisponível'}
+          />
+        </ul>
         {estado.tipo === 'erro' && (
-          <p className="alerta">
-            Não foi possível falar com a API em {API_URL}. Confira se o backend está rodando e se
-            VITE_API_URL está certo.
+          <p className="nota">
+            Não foi possível falar com a API em {API_URL}. Se ela ficou um tempo sem uso, pode
+            levar até um minuto para acordar. Recarregue a página em seguida.
           </p>
         )}
-        {estado.tipo === 'ok' && (
-          <ul>
-            <li>API: {estado.dados.status}</li>
-            <li>Banco de dados: {estado.dados.banco}</li>
-          </ul>
-        )}
-      </div>
+      </section>
     </section>
   )
 }

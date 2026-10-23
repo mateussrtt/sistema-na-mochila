@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.routers import health
+from app.routers import alunos, health, responsaveis
 
 settings = get_settings()
 
@@ -24,3 +24,5 @@ app.add_middleware(
 
 # Todas as rotas ficam sob /api
 app.include_router(health.router, prefix="/api")
+app.include_router(alunos.router, prefix="/api")
+app.include_router(responsaveis.router, prefix="/api")
