@@ -902,6 +902,46 @@ input[type='search']::-webkit-search-cancel-button {
   font-size: 15px;
 }
 
+/* ===== Matrículas ===== */
+.grupo-inicial {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+
+.seletor-opcoes button:disabled {
+  background: var(--realce);
+  color: var(--tinta-suave);
+  cursor: not-allowed;
+}
+
+.seletor-opcoes .seletor-mais.etiqueta {
+  color: var(--tinta-suave);
+}
+
+.seletor-vazio {
+  padding: 12px;
+  font-size: 14px;
+  color: var(--tinta-suave);
+}
+
+.dados {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 20px;
+  margin: 0;
+}
+
+.dados dt {
+  font-size: 14px;
+  color: var(--tinta-suave);
+}
+
+.dados dd {
+  margin: 0;
+  font-weight: 500;
+}
+
 .subformulario-acoes {
   display: flex;
   justify-content: flex-end;

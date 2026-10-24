@@ -47,7 +47,11 @@ export function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   return requisitar<T>(path, { signal })
 }
 
-export function apiEnviar<T>(metodo: 'POST' | 'PUT', path: string, corpo: unknown): Promise<T> {
+export function apiEnviar<T>(
+  metodo: 'POST' | 'PUT' | 'PATCH',
+  path: string,
+  corpo: unknown,
+): Promise<T> {
   return requisitar<T>(path, {
     method: metodo,
     headers: { 'Content-Type': 'application/json' },

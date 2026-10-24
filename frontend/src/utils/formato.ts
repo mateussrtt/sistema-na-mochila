@@ -53,6 +53,18 @@ export function hojeIso(): string {
   return `${hoje.getFullYear()}-${mes}-${dia}`
 }
 
+/** 150 ou "150.00" → R$ 150,00 */
+export function formatarMoeda(valor: string | number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(valor))
+}
+
+/** "150", "150,5" ou "150.50" → número. Devolve null se não for um valor com até 2 casas. */
+export function lerValor(texto: string): number | null {
+  const limpo = texto.trim()
+  if (!/^\d+([.,]\d{1,2})?$/.test(limpo)) return null
+  return Number(limpo.replace(',', '.'))
+}
+
 export function plural(total: number, singular: string, plural: string): string {
   return `${total} ${total === 1 ? singular : plural}`
 }

@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router'
 import Layout from './components/Layout'
 import Cadastros from './pages/cadastros/Cadastros'
 import ListaAlunos from './pages/cadastros/ListaAlunos'
+import ListaMatriculas from './pages/cadastros/ListaMatriculas'
 import ListaResponsaveis from './pages/cadastros/ListaResponsaveis'
 import EmConstrucao from './pages/EmConstrucao'
 import Inicio from './pages/Inicio'
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="alunos" element={<Cadastros />}>
           <Route index element={<ListaAlunos />} />
           <Route path="responsaveis" element={<ListaResponsaveis />} />
+          <Route path="matriculas" element={<ListaMatriculas />} />
         </Route>
         <Route path="mensalidades" element={<EmConstrucao titulo="Mensalidades" />} />
         <Route path="despesas" element={<EmConstrucao titulo="Despesas" />} />

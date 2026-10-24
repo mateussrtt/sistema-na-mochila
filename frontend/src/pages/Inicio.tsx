@@ -1,4 +1,4 @@
-import { ChevronRight, UserRound, Users } from 'lucide-react'
+import { ChevronRight, ClipboardList, UserRound, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 
@@ -49,8 +49,8 @@ export default function Inicio() {
       <header className="pagina-cabecalho">
         <h1>{saudacao()}</h1>
         <p>
-          Este é o painel financeiro do Na Mochila. O cadastro de alunos e responsáveis já está
-          disponível; mensalidades, despesas e caixa chegam nas próximas versões.
+          Este é o painel financeiro do Na Mochila. O cadastro de alunos, responsáveis e matrículas
+          já está disponível; mensalidades, despesas e caixa chegam nas próximas versões.
         </p>
       </header>
 
@@ -75,6 +75,18 @@ export default function Inicio() {
             <span className="pessoa-texto">
               <strong>Responsáveis</strong>
               <span>Mantenha telefones e e-mails de contato em dia</span>
+            </span>
+            <ChevronRight size={18} className="linha-seta" aria-hidden="true" />
+          </Link>
+        </li>
+        <li>
+          <Link to="/alunos/matriculas" className="atalho">
+            <span className="atalho-icone">
+              <ClipboardList size={22} aria-hidden="true" />
+            </span>
+            <span className="pessoa-texto">
+              <strong>Matrículas</strong>
+              <span>Matricule alunos e defina o valor da mensalidade</span>
             </span>
             <ChevronRight size={18} className="linha-seta" aria-hidden="true" />
           </Link>

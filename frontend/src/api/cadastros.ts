@@ -54,3 +54,42 @@ export function salvarResponsavel(dados: ResponsavelEntrada, id?: number) {
     ? apiEnviar<Responsavel>('POST', '/api/responsaveis', dados)
     : apiEnviar<Responsavel>('PUT', `/api/responsaveis/${id}`, dados)
 }
+
+export type AlunoResumo = {
+  id: number
+  nome: string
+  ativo: boolean
+}
+
+export type Matricula = {
+  id: number
+  aluno: AlunoResumo
+  data_inicio: string
+  data_encerramento: string | null
+  /** Vem como texto ("150.00") para não perder as casas decimais */
+  valor_mensalidade: string
+  situacao: 'ativa' | 'encerrada'
+}
+
+export type MatriculaEntrada = {
+  aluno_id: number
+  data_inicio: string
+  valor_mensalidade: string
+}
+
+export type SituacaoMatricula = 'ativas' | 'encerradas' | 'todas'
+
+export function listarMatriculas(busca: string, situacao: SituacaoMatricula, signal?: AbortSignal) {
+  const parametros = new URLSearchParams({ busca, situacao })
+  return apiGet<Matricula[]>(`/api/matriculas?${parametros}`, signal)
+}
+
+export function matricularAluno(dados: MatriculaEntrada) {
+  return apiEnviar<Matricula>('POST', '/api/matriculas', dados)
+}
+
+export function encerrarMatricula(id: number, dataEncerramento: string) {
+  return apiEnviar<Matricula>('PATCH', `/api/matriculas/${id}/encerrar`, {
+    data_encerramento: dataEncerramento,
+  })
+}
