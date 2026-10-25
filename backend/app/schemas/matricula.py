@@ -5,9 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models import SituacaoMatricula
 
-# Maior valor que cabe no inteiro do banco (id). Acima disso o PostgreSQL daria erro 500
-ID_MAXIMO = 2_147_483_647
-
+from app.schemas.comum import ID_MAXIMO
 
 def exige_data(valor: object, mensagem: str) -> object:
     """Troca data vazia por uma mensagem em português, em vez do erro padrão em inglês."""

@@ -1,16 +1,18 @@
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.session import get_db
 from app.models import Aluno, Responsavel
 from app.schemas.aluno import AlunoEntrada, AlunoLeitura
+from app.schemas.comum import ID_MAXIMO, termo_de_busca
 
 router = APIRouter(prefix="/alunos", tags=["alunos"])
 
 Banco = Annotated[Session, Depends(get_db)]
+AlunoId = Annotated[int, Path(gt=0, le=ID_MAXIMO)]
 
 
 def busca_aluno(db: Session, aluno_id: int) -> Aluno:
@@ -41,8 +43,9 @@ def listar(
     consulta = select(Aluno).options(selectinload(Aluno.responsaveis)).order_by(Aluno.nome)
     if situacao != "todos":
         consulta = consulta.where(Aluno.ativo.is_(situacao == "ativos"))
-    if busca and busca.strip():
-        termo = f"%{busca.strip()}%"
+    termo = termo_de_busca(busca)
+    if termo:
+        termo = f"%{termo}%"
         consulta = consulta.where(
             or_(Aluno.nome.ilike(termo), Aluno.responsaveis.any(Responsavel.nome.ilike(termo)))
         )
@@ -59,12 +62,12 @@ def cadastrar(dados: AlunoEntrada, db: Banco) -> Aluno:
 
 
 @router.get("/{aluno_id}", response_model=AlunoLeitura)
-def consultar(aluno_id: int, db: Banco) -> Aluno:
+def consultar(aluno_id: AlunoId, db: Banco) -> Aluno:
     return busca_aluno(db, aluno_id)
 
 
 @router.put("/{aluno_id}", response_model=AlunoLeitura)
-def editar(aluno_id: int, dados: AlunoEntrada, db: Banco) -> Aluno:
+def editar(aluno_id: AlunoId, dados: AlunoEntrada, db: Banco) -> Aluno:
     """Edita o aluno. Para inativar ou reativar, envie "ativo": false ou true."""
     aluno = busca_aluno(db, aluno_id)
     for campo, valor in dados.model_dump(exclude={"responsavel_ids"}).items():
