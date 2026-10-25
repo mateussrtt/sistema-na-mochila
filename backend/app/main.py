@@ -25,6 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.exception_handler(RequestValidationError)
 async def erro_de_validacao(_: Request, erro: RequestValidationError) -> JSONResponse:
     """Responde 422 só com o campo e a mensagem de cada erro.
@@ -35,6 +36,7 @@ async def erro_de_validacao(_: Request, erro: RequestValidationError) -> JSONRes
     """
     detalhes = [{"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in erro.errors()]
     return JSONResponse(status_code=422, content=jsonable_encoder({"detail": detalhes}))
+
 
 # Todas as rotas ficam sob /api
 app.include_router(health.router, prefix="/api")

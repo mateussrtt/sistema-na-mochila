@@ -4,8 +4,8 @@ from decimal import Decimal, InvalidOperation
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models import SituacaoMatricula
-
 from app.schemas.comum import ID_MAXIMO
+
 
 def exige_data(valor: object, mensagem: str) -> object:
     """Troca data vazia por uma mensagem em português, em vez do erro padrão em inglês."""

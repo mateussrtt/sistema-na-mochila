@@ -30,6 +30,7 @@ def busca_responsaveis(db: Session, ids: list[int]) -> list[Responsavel]:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Responsável não encontrado")
     return responsaveis
 
+
 def encerra_matricula_ativa(db: Session, aluno_id: int) -> None:
     """Encerra a matrícula ativa do aluno, se houver, para ela não gerar mais mensalidades.
 
@@ -44,6 +45,7 @@ def encerra_matricula_ativa(db: Session, aluno_id: int) -> None:
     if matricula is not None:
         matricula.situacao = SituacaoMatricula.ENCERRADA
         matricula.data_encerramento = max(date.today(), matricula.data_inicio)
+
 
 @router.get("", response_model=list[AlunoLeitura])
 def listar(

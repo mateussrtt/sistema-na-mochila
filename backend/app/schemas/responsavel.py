@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 
 from app.schemas.comum import texto_valido
 
+
 class ResponsavelEntrada(BaseModel):
     """Dados enviados para cadastrar ou editar um responsável."""
 
