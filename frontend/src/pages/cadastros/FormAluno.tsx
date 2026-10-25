@@ -1,12 +1,18 @@
 import { ArchiveRestore, Archive, UserPlus, X } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
-import { salvarAluno, type Aluno, type Responsavel } from '../../api/cadastros'
+import {
+  buscarMatriculaAtiva,
+  salvarAluno,
+  type Aluno,
+  type Matricula,
+  type Responsavel,
+} from '../../api/cadastros'
 import { ApiError } from '../../api/client'
 import Campo from '../../components/Campo'
 import Monograma from '../../components/Monograma'
 import { ligacaoDoCampo } from '../../utils/campo'
-import { hojeIso } from '../../utils/formato'
+import { formatarMoeda, hojeIso } from '../../utils/formato'
 import FormResponsavel from './FormResponsavel'
 import SeletorResponsavel from './SeletorResponsavel'
 
@@ -28,6 +34,30 @@ export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
   const [tentou, setTentou] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erroApi, setErroApi] = useState<Erros>({})
+    const [matriculaAtiva, setMatriculaAtiva] = useState<Matricula | null>(null)
+  const [confirmandoInativacao, setConfirmandoInativacao] = useState(false)
+  const confirmacao = useRef<HTMLDivElement>(null)
+
+  // Ao inativar o aluno, a matrícula ativa dele é encerrada junto. Por isso o painel
+  // precisa saber se ela existe, para avisar antes.
+  const alunoId = aluno?.id
+  const alunoAtivo = aluno?.ativo
+  useEffect(() => {
+    if (alunoId === undefined || !alunoAtivo) return
+    const controle = new AbortController()
+    buscarMatriculaAtiva(alunoId, controle.signal)
+      .then(setMatriculaAtiva)
+      .catch(() => {
+        // Sem a consulta, o aviso não aparece, mas a API encerra a matrícula do mesmo jeito
+      })
+    return () => controle.abort()
+  }, [alunoId, alunoAtivo])
+
+  useEffect(() => {
+    if (confirmandoInativacao) {
+      confirmacao.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [confirmandoInativacao])
 
   function validar(): Erros {
     const erros: Erros = {}
@@ -69,6 +99,17 @@ export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
       })
     } finally {
       setSalvando(false)
+    }
+  }
+
+  function aoMudarSituacao() {
+    if (!aluno) return
+    if (!aluno.ativo) {
+      void enviar(true, 'Aluno reativado')
+    } else if (matriculaAtiva) {
+      setConfirmandoInativacao(true)
+    } else {
+      void enviar(false, 'Aluno inativado')
     }
   }
 
@@ -183,6 +224,34 @@ export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
           )}
         </fieldset>
 
+        {confirmandoInativacao && aluno && matriculaAtiva && (
+          <div className="subformulario" ref={confirmacao} role="alert">
+            <h3>Inativar {aluno.nome}?</h3>
+            <p>
+              A matrícula ativa, de {formatarMoeda(matriculaAtiva.valor_mensalidade)} por mês,
+              também será encerrada e deixa de gerar mensalidades. Se o aluno voltar, faça uma
+              nova matrícula.
+            </p>
+            <div className="subformulario-acoes">
+              <button
+                type="button"
+                className="botao botao-texto"
+                onClick={() => setConfirmandoInativacao(false)}
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                className="botao botao-secundario"
+                disabled={salvando}
+                onClick={() => void enviar(false, 'Aluno inativado e matrícula encerrada')}
+              >
+                Inativar e encerrar matrícula
+              </button>
+            </div>
+          </div>
+        )}
+
         {erros.geral && (
           <p className="erro-geral" role="alert">
             {erros.geral}
@@ -195,10 +264,8 @@ export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
           <button
             type="button"
             className="botao botao-texto botao-com-icone"
-            disabled={salvando}
-            onClick={() =>
-              void enviar(!aluno.ativo, aluno.ativo ? 'Aluno inativado' : 'Aluno reativado')
-            }
+            disabled={salvando || confirmandoInativacao}
+            onClick={aoMudarSituacao}
           >
             {aluno.ativo ? (
               <Archive size={18} aria-hidden="true" />

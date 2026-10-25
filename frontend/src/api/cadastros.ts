@@ -93,3 +93,10 @@ export function encerrarMatricula(id: number, dataEncerramento: string) {
     data_encerramento: dataEncerramento,
   })
 }
+
+/** Matrícula ativa do aluno, ou null se ele não tiver nenhuma */
+export async function buscarMatriculaAtiva(alunoId: number, signal?: AbortSignal) {
+  const parametros = new URLSearchParams({ situacao: 'ativas', aluno_id: String(alunoId) })
+  const lista = await apiGet<Matricula[]>(`/api/matriculas?${parametros}`, signal)
+  return lista[0] ?? null
+}

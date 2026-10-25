@@ -1,8 +1,12 @@
 from datetime import date
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.comum import ID_MAXIMO, texto_valido
 from app.schemas.responsavel import ResponsavelLeitura
+
+IdResponsavel = Annotated[int, Field(gt=0, le=ID_MAXIMO)]
 
 
 class AlunoEntrada(BaseModel):
@@ -12,7 +16,7 @@ class AlunoEntrada(BaseModel):
     data_nascimento: date | None = None
     escola: str | None = Field(default=None, max_length=120)
     municipio: str | None = Field(default=None, max_length=80)
-    responsavel_ids: list[int] = Field(min_length=1)
+    responsavel_ids: list[IdResponsavel] = Field(min_length=1)
     ativo: bool = True
 
     @field_validator("nome", mode="before")
@@ -26,6 +30,11 @@ class AlunoEntrada(BaseModel):
         if isinstance(valor, str):
             valor = valor.strip()
         return valor or None
+
+    @field_validator("nome", "escola", "municipio")
+    @classmethod
+    def sem_caractere_invalido(cls, valor: str | None) -> str | None:
+        return texto_valido(valor)
 
     @field_validator("data_nascimento")
     @classmethod

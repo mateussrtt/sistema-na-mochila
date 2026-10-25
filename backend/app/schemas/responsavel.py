@@ -2,6 +2,8 @@ import re
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
+from app.schemas.comum import texto_valido
+
 
 class ResponsavelEntrada(BaseModel):
     """Dados enviados para cadastrar ou editar um responsável."""
@@ -21,6 +23,11 @@ class ResponsavelEntrada(BaseModel):
         if isinstance(valor, str):
             valor = valor.strip()
         return valor or None
+
+    @field_validator("nome", "telefone")
+    @classmethod
+    def sem_caractere_invalido(cls, valor: str | None) -> str | None:
+        return texto_valido(valor)
 
     @field_validator("telefone")
     @classmethod

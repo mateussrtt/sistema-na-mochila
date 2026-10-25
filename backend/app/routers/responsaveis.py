@@ -1,16 +1,18 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models import Responsavel
+from app.schemas.comum import ID_MAXIMO, termo_de_busca
 from app.schemas.responsavel import ResponsavelEntrada, ResponsavelLeitura
 
 router = APIRouter(prefix="/responsaveis", tags=["responsáveis"])
 
 Banco = Annotated[Session, Depends(get_db)]
+ResponsavelId = Annotated[int, Path(gt=0, le=ID_MAXIMO)]
 
 
 def busca_responsavel(db: Session, responsavel_id: int) -> Responsavel:
@@ -24,8 +26,9 @@ def busca_responsavel(db: Session, responsavel_id: int) -> Responsavel:
 def listar(db: Banco, busca: str | None = None) -> list[Responsavel]:
     """Lista os responsáveis em ordem alfabética, com busca opcional por nome."""
     consulta = select(Responsavel).order_by(Responsavel.nome)
-    if busca and busca.strip():
-        consulta = consulta.where(Responsavel.nome.ilike(f"%{busca.strip()}%"))
+    termo = termo_de_busca(busca)
+    if termo:
+        consulta = consulta.where(Responsavel.nome.ilike(f"%{termo}%"))
     return list(db.scalars(consulta))
 
 
@@ -38,12 +41,12 @@ def cadastrar(dados: ResponsavelEntrada, db: Banco) -> Responsavel:
 
 
 @router.get("/{responsavel_id}", response_model=ResponsavelLeitura)
-def consultar(responsavel_id: int, db: Banco) -> Responsavel:
+def consultar(responsavel_id: ResponsavelId, db: Banco) -> Responsavel:
     return busca_responsavel(db, responsavel_id)
 
 
 @router.put("/{responsavel_id}", response_model=ResponsavelLeitura)
-def editar(responsavel_id: int, dados: ResponsavelEntrada, db: Banco) -> Responsavel:
+def editar(responsavel_id: ResponsavelId, dados: ResponsavelEntrada, db: Banco) -> Responsavel:
     responsavel = busca_responsavel(db, responsavel_id)
     for campo, valor in dados.model_dump().items():
         setattr(responsavel, campo, valor)

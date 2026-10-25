@@ -28,7 +28,8 @@ def test_busca_responsavel_por_nome(api):
     api.post("/api/responsaveis", json={"nome": "Carla Mendes", "email": "carla@exemplo.com"})
     api.post("/api/responsaveis", json={"nome": "Paulo Lima", "email": "paulo@exemplo.com"})
     nomes = [r["nome"] for r in api.get("/api/responsaveis", params={"busca": "carla"}).json()]
-    assert nomes == ["Carla Mendes"]
+    assert "Carla Mendes" in nomes
+    assert "Paulo Lima" not in nomes
 
 
 def test_edita_responsavel(api):

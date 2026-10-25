@@ -114,8 +114,8 @@ def test_aluno_pode_ser_matriculado_de_novo_depois_de_encerrar(api, aluno):
     segunda = matricular(api, aluno["id"], valor_mensalidade="120.00")
     assert segunda.status_code == 201
 
-    todas = api.get("/api/matriculas", params={"situacao": "todas"}).json()
-    assert {m["id"] for m in todas} == {primeira["id"], segunda.json()["id"]}
+    todas = api.get("/api/matriculas", params={"situacao": "todas", "aluno_id": aluno["id"]})
+    assert {m["id"] for m in todas.json()} == {primeira["id"], segunda.json()["id"]}
 
 
 def test_lista_filtra_por_situacao_e_busca(api, aluno):
@@ -127,8 +127,12 @@ def test_lista_filtra_por_situacao_e_busca(api, aluno):
     encerrada = matricular(api, outro["id"]).json()
     encerrar(api, encerrada["id"])
 
+    criadas = {ativa["id"], encerrada["id"]}
+
     def ids(**parametros):
-        return [m["id"] for m in api.get("/api/matriculas", params=parametros).json()]
+        # Considera só as matrículas deste teste: o banco pode ter outras, criadas à mão
+        lista = api.get("/api/matriculas", params=parametros).json()
+        return [m["id"] for m in lista if m["id"] in criadas]
 
     assert ids() == [ativa["id"]]
     assert ids(situacao="encerradas") == [encerrada["id"]]
@@ -300,8 +304,10 @@ def test_lista_em_ordem_de_aluno_e_depois_da_mais_recente(api, aluno):
     ultima = matricular(api, zeca.json()["id"]).json()
     pedro = matricular(api, aluno["id"]).json()
 
-    ordem = [m["id"] for m in api.get("/api/matriculas", params={"situacao": "todas"}).json()]
-    assert ordem == [recente["id"], antiga["id"], pedro["id"], ultima["id"]]
+    esperada = [recente["id"], antiga["id"], pedro["id"], ultima["id"]]
+    lista = api.get("/api/matriculas", params={"situacao": "todas"}).json()
+    # Considera só as matrículas deste teste: o banco pode ter outras, criadas à mão
+    assert [m["id"] for m in lista if m["id"] in esperada] == esperada
 
 
 def test_busca_com_caractere_nulo_nao_da_erro_500(api, aluno):
