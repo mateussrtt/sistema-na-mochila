@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
-from app.routers import alunos, health, matriculas, responsaveis
+from app.routers import alunos, auth, health, matriculas, responsaveis
 
 settings = get_settings()
 
@@ -40,6 +40,7 @@ async def erro_de_validacao(_: Request, erro: RequestValidationError) -> JSONRes
 
 # Todas as rotas ficam sob /api
 app.include_router(health.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 app.include_router(alunos.router, prefix="/api")
 app.include_router(responsaveis.router, prefix="/api")
 app.include_router(matriculas.router, prefix="/api")

@@ -1,11 +1,17 @@
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.seguranca import criar_token, gerar_hash
 from app.db.session import engine, get_db
 from app.main import app
+from app.models import Perfil, Usuario
+
+SENHA_DE_TESTE = "senha-de-teste"
+# Calculado uma vez só: o hash da senha é lento de propósito
+HASH_DE_TESTE = gerar_hash(SENHA_DE_TESTE)
 
 
 @pytest.fixture
@@ -26,9 +32,49 @@ def db() -> Iterator[Session]:
 
 
 @pytest.fixture
-def api(db: Session) -> Iterator[TestClient]:
-    """Cliente da API que usa a sessão de teste no lugar da real."""
+def cria_usuario(db: Session) -> Callable[..., Usuario]:
+    """Cria um usuário no banco de teste. O e-mail muda a cada chamada."""
+    contador = 0
+
+    def criar(perfil: Perfil = Perfil.ADMINISTRADOR, ativo: bool = True) -> Usuario:
+        nonlocal contador
+        contador += 1
+        usuario = Usuario(
+            nome=f"Usuário {perfil.value} {contador}",
+            email=f"{perfil.value}{contador}@teste.local",
+            senha_hash=HASH_DE_TESTE,
+            perfil=perfil,
+            ativo=ativo,
+        )
+        db.add(usuario)
+        db.flush()
+        return usuario
+
+    return criar
+
+
+@pytest.fixture
+def sem_login(db: Session) -> Iterator[TestClient]:
+    """Cliente da API sem token, como alguém que ainda não entrou."""
     app.dependency_overrides[get_db] = lambda: db
     with TestClient(app) as cliente:
         yield cliente
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def api_como(sem_login: TestClient, cria_usuario) -> Callable[[Perfil], TestClient]:
+    """Devolve um cliente logado com o perfil pedido."""
+
+    def logar(perfil: Perfil) -> TestClient:
+        cliente = TestClient(app)
+        cliente.headers["Authorization"] = f"Bearer {criar_token(cria_usuario(perfil).id)}"
+        return cliente
+
+    return logar
+
+
+@pytest.fixture
+def api(api_como) -> TestClient:
+    """Cliente da API logado como administrador, que pode fazer tudo."""
+    return api_como(Perfil.ADMINISTRADOR)

@@ -5,12 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.acesso import LOGADO, PODE_EDITAR
 from app.db.session import get_db
 from app.models import Aluno, Matricula, Responsavel, SituacaoMatricula
 from app.schemas.aluno import AlunoEntrada, AlunoLeitura
 from app.schemas.comum import ID_MAXIMO, termo_de_busca
 
-router = APIRouter(prefix="/alunos", tags=["alunos"])
+# Todas as rotas exigem login. As que alteram dados exigem perfil de operador ou administrador
+router = APIRouter(prefix="/alunos", tags=["alunos"], dependencies=[LOGADO])
 
 Banco = Annotated[Session, Depends(get_db)]
 AlunoId = Annotated[int, Path(gt=0, le=ID_MAXIMO)]
@@ -69,7 +71,9 @@ def listar(
     return list(db.scalars(consulta))
 
 
-@router.post("", response_model=AlunoLeitura, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=AlunoLeitura, status_code=status.HTTP_201_CREATED, dependencies=[PODE_EDITAR]
+)
 def cadastrar(dados: AlunoEntrada, db: Banco) -> Aluno:
     aluno = Aluno(**dados.model_dump(exclude={"responsavel_ids"}))
     aluno.responsaveis = busca_responsaveis(db, dados.responsavel_ids)
@@ -83,7 +87,7 @@ def consultar(aluno_id: AlunoId, db: Banco) -> Aluno:
     return busca_aluno(db, aluno_id)
 
 
-@router.put("/{aluno_id}", response_model=AlunoLeitura)
+@router.put("/{aluno_id}", response_model=AlunoLeitura, dependencies=[PODE_EDITAR])
 def editar(aluno_id: AlunoId, dados: AlunoEntrada, db: Banco) -> Aluno:
     """Edita o aluno. Para inativar ou reativar, envie "ativo": false ou true.
 

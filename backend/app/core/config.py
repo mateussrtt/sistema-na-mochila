@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +12,14 @@ class Settings(BaseSettings):
     database_url: str
     # Endereços do frontend que podem chamar a API, separados por vírgula
     cors_origins: str = "http://localhost:5173"
+    # Chave que assina os tokens de login. Precisa ser longa e secreta
+    secret_key: str = Field(min_length=32)
+    # Por quantas horas o login vale antes de pedir a senha de novo
+    horas_de_sessao: int = Field(default=8, gt=0)
+    # Primeiro administrador, criado por "python -m app.criar_admin"
+    admin_nome: str = "Administrador"
+    admin_email: str | None = None
+    admin_senha: str | None = None
 
     @property
     def sqlalchemy_url(self) -> str:

@@ -28,6 +28,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/na_mochila
+      # Chave só para os testes. A de produção fica no Render e nunca vai para o código
+      SECRET_KEY: chave-usada-somente-nos-testes-do-ci
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

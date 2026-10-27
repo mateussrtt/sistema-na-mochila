@@ -9,7 +9,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     # O plano gratuito não tem "pre-deploy", então as migrações rodam na inicialização
-    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: alembic upgrade head && python -m app.criar_admin && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     # Só publica depois que o CI (GitHub Actions) passar
     autoDeployTrigger: checksPass
@@ -20,3 +20,9 @@ services:
         sync: false # connection string da branch production do Neon
       - key: CORS_ORIGINS
         sync: false # URL do frontend na Vercel
+      - key: SECRET_KEY
+        sync: false # chave longa e aleatória que assina os logins
+      - key: ADMIN_EMAIL
+        sync: false # e-mail do primeiro administrador
+      - key: ADMIN_SENHA
+        sync: false # senha do primeiro administrador, com pelo menos 8 caracteres
