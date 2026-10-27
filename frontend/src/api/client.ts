@@ -1,5 +1,7 @@
 // Cliente único para falar com a API. Todas as telas devem usar estas funções.
 
+import { apagarToken, lerToken, SESSAO_EXPIROU } from '../sessao/token'
+
 export const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 
 export class ApiError extends Error {
@@ -35,8 +37,18 @@ async function lerErro(resposta: Response): Promise<ApiError> {
   return new ApiError(resposta.status, mensagem, campos)
 }
 
-async function requisitar<T>(path: string, init?: RequestInit): Promise<T> {
-  const resposta = await fetch(`${API_URL}${path}`, init)
+async function requisitar<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // Envia o token de login em todas as chamadas
+  const token = lerToken()
+  const headers = new Headers(init.headers)
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  const resposta = await fetch(`${API_URL}${path}`, { ...init, headers })
+  if (resposta.status === 401 && token) {
+    // O token venceu ou o usuário foi desativado: volta para a tela de login
+    apagarToken()
+    window.dispatchEvent(new Event(SESSAO_EXPIROU))
+  }
   if (!resposta.ok) {
     throw await lerErro(resposta)
   }

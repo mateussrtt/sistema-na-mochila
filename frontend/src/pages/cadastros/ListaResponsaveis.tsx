@@ -8,6 +8,7 @@ import { Carregando, FalhaAoCarregar, Vazio } from '../../components/EstadoLista
 import Gaveta from '../../components/Gaveta'
 import Monograma from '../../components/Monograma'
 import { useAtraso } from '../../hooks/useAtraso'
+import { useSessao } from '../../sessao/contexto'
 import { plural } from '../../utils/formato'
 import FormResponsavel from './FormResponsavel'
 
@@ -21,6 +22,7 @@ export default function ListaResponsaveis() {
   const [gaveta, setGaveta] = useState<Gaveta>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const buscaAtrasada = useAtraso(busca.trim())
+  const { podeEditar } = useSessao()
 
   useEffect(() => {
     const controle = new AbortController()
@@ -51,14 +53,16 @@ export default function ListaResponsaveis() {
           aoMudar={setBusca}
           placeholder="Buscar responsável pelo nome"
         />
-        <button
-          type="button"
-          className="botao botao-principal botao-com-icone"
-          onClick={() => setGaveta({ modo: 'novo' })}
-        >
-          <Plus size={18} aria-hidden="true" />
-          Cadastrar responsável
-        </button>
+        {podeEditar && (
+          <button
+            type="button"
+            className="botao botao-principal botao-com-icone"
+            onClick={() => setGaveta({ modo: 'novo' })}
+          >
+            <Plus size={18} aria-hidden="true" />
+            Cadastrar responsável
+          </button>
+        )}
       </div>
 
       {falhou ? (
@@ -120,7 +124,11 @@ export default function ListaResponsaveis() {
       <Gaveta
         aberta={gaveta !== null}
         titulo={gaveta?.modo === 'editar' ? gaveta.responsavel.nome : 'Cadastrar responsável'}
-        descricao="Informe ao menos um contato: telefone ou e-mail."
+        descricao={
+          podeEditar
+            ? 'Informe ao menos um contato: telefone ou e-mail.'
+            : 'Seu perfil pode consultar os dados, mas não alterar.'
+        }
         aoFechar={() => setGaveta(null)}
       >
         <FormResponsavel

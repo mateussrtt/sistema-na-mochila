@@ -8,6 +8,7 @@ import { Carregando, FalhaAoCarregar, Vazio } from '../../components/EstadoLista
 import Gaveta from '../../components/Gaveta'
 import Monograma from '../../components/Monograma'
 import { useAtraso } from '../../hooks/useAtraso'
+import { useSessao } from '../../sessao/contexto'
 import { idade, plural } from '../../utils/formato'
 import FormAluno from './FormAluno'
 
@@ -35,6 +36,7 @@ export default function ListaAlunos() {
   const [gaveta, setGaveta] = useState<Gaveta>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const buscaAtrasada = useAtraso(busca.trim())
+  const { podeEditar } = useSessao()
 
   useEffect(() => {
     const controle = new AbortController()
@@ -83,14 +85,16 @@ export default function ListaAlunos() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className="botao botao-principal botao-com-icone"
-          onClick={() => setGaveta({ modo: 'novo' })}
-        >
-          <Plus size={18} aria-hidden="true" />
-          Cadastrar aluno
-        </button>
+        {podeEditar && (
+          <button
+            type="button"
+            className="botao botao-principal botao-com-icone"
+            onClick={() => setGaveta({ modo: 'novo' })}
+          >
+            <Plus size={18} aria-hidden="true" />
+            Cadastrar aluno
+          </button>
+        )}
       </div>
 
       {falhou ? (
@@ -108,14 +112,16 @@ export default function ListaAlunos() {
             titulo="Nenhum aluno ativo ainda"
             texto="Cadastre o primeiro aluno e vincule os responsáveis por ele."
           >
-            <button
-              type="button"
-              className="botao botao-principal botao-com-icone"
-              onClick={() => setGaveta({ modo: 'novo' })}
-            >
-              <Plus size={18} aria-hidden="true" />
-              Cadastrar aluno
-            </button>
+            {podeEditar && (
+              <button
+                type="button"
+                className="botao botao-principal botao-com-icone"
+                onClick={() => setGaveta({ modo: 'novo' })}
+              >
+                <Plus size={18} aria-hidden="true" />
+                Cadastrar aluno
+              </button>
+            )}
           </Vazio>
         ) : (
           <Vazio titulo="Nenhum aluno inativo" texto="Alunos inativados aparecem aqui." />
@@ -181,9 +187,11 @@ export default function ListaAlunos() {
         aberta={gaveta !== null}
         titulo={gaveta?.modo === 'editar' ? gaveta.aluno.nome : 'Cadastrar aluno'}
         descricao={
-          gaveta?.modo === 'editar'
-            ? 'Edite os dados ou os responsáveis vinculados.'
-            : 'O aluno precisa de ao menos um responsável com telefone ou e-mail.'
+          !podeEditar
+            ? 'Seu perfil pode consultar os dados, mas não alterar.'
+            : gaveta?.modo === 'editar'
+              ? 'Edite os dados ou os responsáveis vinculados.'
+              : 'O aluno precisa de ao menos um responsável com telefone ou e-mail.'
         }
         aoFechar={() => setGaveta(null)}
       >

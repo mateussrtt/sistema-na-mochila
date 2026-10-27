@@ -1193,3 +1193,202 @@ input[type='search']::-webkit-search-cancel-button {
     transition: none !important;
   }
 }
+
+/* ===== Login e sessão ===== */
+.abertura {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  min-height: 100vh;
+  color: var(--tinta-suave);
+}
+
+.entrar {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+  min-height: 100vh;
+}
+
+.entrar-marca {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  padding: 48px clamp(32px, 6vw, 80px);
+  background-color: var(--marinho);
+  /* Grade de pontos discreta, lembrando uma placa de prototipagem */
+  background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: #fff;
+}
+
+.marca-selo-grande {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  font-size: 22px;
+}
+
+.entrar-nome {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.entrar-subtitulo {
+  margin-top: 6px;
+  font-size: 17px;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.entrar-rodape {
+  margin-top: auto;
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.45);
+}
+
+.entrar-area {
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+}
+
+.entrar-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(380px, 100%);
+}
+
+.entrar-formulario header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.entrar-formulario h1 {
+  font-size: 28px;
+  letter-spacing: -0.025em;
+}
+
+.entrar-formulario header p {
+  color: var(--tinta-suave);
+}
+
+.entrar-formulario .botao-principal {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.campo-senha {
+  position: relative;
+}
+
+.campo-senha input {
+  padding-right: 48px;
+}
+
+.campo-senha .botao-icone {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+.lateral-usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 12px 8px 0 10px;
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.lateral-usuario .pessoa-texto {
+  flex: 1;
+}
+
+.lateral-usuario .pessoa-texto strong {
+  color: #fff;
+  font-size: 14px;
+}
+
+.lateral-usuario .pessoa-texto span {
+  color: rgb(255 255 255 / 0.55);
+  font-size: 12.5px;
+}
+
+.lateral-usuario .botao-icone {
+  color: rgb(255 255 255 / 0.7);
+}
+
+.lateral-usuario .botao-icone:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+}
+
+/* O conteúdo da gaveta é um fieldset para poder ficar só de leitura no perfil de consulta */
+fieldset.gaveta-conteudo {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+}
+
+.campo input:disabled,
+.seletor input:disabled {
+  background: var(--realce);
+  color: var(--tinta);
+  cursor: default;
+  opacity: 1;
+}
+
+@media (max-width: 860px) {
+  .entrar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .entrar-marca {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .marca-selo-grande {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 17px;
+  }
+
+  .entrar-nome {
+    font-size: 22px;
+  }
+
+  .entrar-subtitulo {
+    margin-top: 0;
+    font-size: 14px;
+  }
+
+  .entrar-rodape {
+    display: none;
+  }
+
+  .entrar-area {
+    place-items: start center;
+    padding-top: 40px;
+  }
+
+  .lateral.aberta .lateral-usuario {
+    display: flex;
+    padding-top: 12px;
+    margin-top: 12px;
+  }
+
+  .lateral-usuario {
+    display: none;
+  }
+}
