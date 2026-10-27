@@ -2,18 +2,23 @@ import {
   ChartNoAxesColumn,
   HandCoins,
   House,
+  KeyRound,
   LogOut,
   Menu,
   ReceiptText,
+  ShieldCheck,
   TrendingDown,
   Users,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
 
 import { NOME_DO_PERFIL } from '../api/auth'
+import FormMinhaSenha from '../pages/usuarios/FormMinhaSenha'
 import { useSessao } from '../sessao/contexto'
+import Aviso from './Aviso'
+import Gaveta from './Gaveta'
 import Monograma from './Monograma'
 
 const menu = [
@@ -27,7 +32,10 @@ const menu = [
 
 export default function Layout() {
   const [menuAberto, setMenuAberto] = useState(false)
-  const { usuario, sair } = useSessao()
+  const [trocandoSenha, setTrocandoSenha] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const { usuario, ehAdmin, sair } = useSessao()
+  const fecharAviso = useCallback(() => setAviso(null), [])
 
   return (
     <div className="app">
@@ -61,24 +69,43 @@ export default function Layout() {
               {rotulo}
             </NavLink>
           ))}
+          {ehAdmin && (
+            <>
+              <p className="menu-secao">Administração</p>
+              <NavLink to="/usuarios" onClick={() => setMenuAberto(false)}>
+                <ShieldCheck size={19} strokeWidth={1.8} aria-hidden="true" />
+                Usuários
+              </NavLink>
+            </>
+          )}
         </nav>
 
         {usuario && (
           <div className="lateral-usuario">
-            <Monograma nome={usuario.nome} tamanho="p" />
-            <span className="pessoa-texto">
-              <strong>{usuario.nome}</strong>
-              <span>{NOME_DO_PERFIL[usuario.perfil]}</span>
-            </span>
-            <button
-              type="button"
-              className="botao-icone"
-              aria-label="Sair"
-              title="Sair"
-              onClick={sair}
-            >
-              <LogOut size={18} aria-hidden="true" />
-            </button>
+            <div className="lateral-pessoa">
+              <Monograma nome={usuario.nome} tamanho="p" />
+              <span className="pessoa-texto">
+                <strong>{usuario.nome}</strong>
+                <span>{NOME_DO_PERFIL[usuario.perfil]}</span>
+              </span>
+            </div>
+            <div className="lateral-acoes">
+              <button
+                type="button"
+                className="lateral-acao"
+                onClick={() => {
+                  setMenuAberto(false)
+                  setTrocandoSenha(true)
+                }}
+              >
+                <KeyRound size={16} aria-hidden="true" />
+                Trocar senha
+              </button>
+              <button type="button" className="lateral-acao" onClick={sair}>
+                <LogOut size={16} aria-hidden="true" />
+                Sair
+              </button>
+            </div>
           </div>
         )}
       </aside>
@@ -86,6 +113,22 @@ export default function Layout() {
       <main className="conteudo">
         <Outlet />
       </main>
+
+      <Gaveta
+        aberta={trocandoSenha}
+        titulo="Trocar minha senha"
+        descricao="Depois de trocar, use a nova senha no próximo acesso."
+        aoFechar={() => setTrocandoSenha(false)}
+      >
+        <FormMinhaSenha
+          aoCancelar={() => setTrocandoSenha(false)}
+          aoSalvar={() => {
+            setTrocandoSenha(false)
+            setAviso('Senha trocada')
+          }}
+        />
+      </Gaveta>
+      <Aviso mensagem={aviso} aoSumir={fecharAviso} />
     </div>
   )
 }

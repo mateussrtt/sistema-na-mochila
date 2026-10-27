@@ -9,8 +9,12 @@ export type Sessao = {
   conferindo: boolean
   /** Administrador e operador podem cadastrar e editar. Consulta só visualiza. */
   podeEditar: boolean
+  /** Só o administrador gerencia usuários */
+  ehAdmin: boolean
   entrar: (email: string, senha: string) => Promise<void>
   sair: () => void
+  /** Atualiza nome e e-mail no menu depois que a pessoa edita o próprio cadastro */
+  atualizarUsuario: (usuario: Usuario) => void
 }
 
 export const ContextoDaSessao = createContext<Sessao | null>(null)

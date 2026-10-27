@@ -47,8 +47,10 @@ export default function ProvedorDeSessao({ children }: { children: ReactNode }) 
       usuario,
       conferindo,
       podeEditar: usuario?.perfil === 'administrador' || usuario?.perfil === 'operador',
+      ehAdmin: usuario?.perfil === 'administrador',
       entrar,
       sair,
+      atualizarUsuario: setUsuario,
     }),
     [usuario, conferindo, entrar, sair],
   )

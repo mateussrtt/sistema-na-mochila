@@ -1392,3 +1392,169 @@ fieldset.gaveta-conteudo {
     display: none;
   }
 }
+
+/* ===== Usuários e acessos ===== */
+.menu-secao {
+  margin: 18px 12px 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.4);
+}
+
+.barra-direita {
+  justify-content: flex-end;
+}
+
+.etiqueta-voce {
+  background: var(--laranja-suave);
+  color: #8a4510;
+}
+
+.grupo-titulo {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.grupo > .botao-com-icone {
+  align-self: flex-start;
+}
+
+/* Cartões de escolha do perfil, com o que cada um pode fazer */
+.perfis {
+  gap: 8px;
+}
+
+.perfil-opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--linha-forte);
+  border-radius: 12px;
+  background: var(--superficie);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.perfil-opcao:hover {
+  border-color: var(--tinta-suave);
+}
+
+.perfil-opcao:has(input:checked) {
+  border-color: var(--laranja);
+  background: #fffaf3;
+  box-shadow: inset 0 0 0 1px var(--laranja);
+}
+
+.perfil-opcao:has(input:focus-visible) {
+  outline: 3px solid rgb(20 33 61 / 0.25);
+  outline-offset: 2px;
+}
+
+.perfil-opcao input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--laranja-forte);
+}
+
+.perfil-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perfil-texto strong {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.perfil-texto span {
+  font-size: 13px;
+  color: var(--tinta-suave);
+}
+
+.perfis:disabled .perfil-opcao {
+  cursor: default;
+}
+
+.perfis:disabled .perfil-opcao:not(:has(input:checked)) {
+  opacity: 0.55;
+}
+
+.perfis:disabled .perfil-opcao:hover {
+  border-color: var(--linha-forte);
+}
+
+.perfis:disabled .perfil-opcao:has(input:checked) {
+  border-color: var(--laranja);
+}
+
+/* Quem está logado, com as ações de trocar a senha e sair logo abaixo */
+.lateral-usuario {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 14px 4px 0;
+}
+
+.lateral-pessoa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 6px;
+}
+
+.lateral-pessoa .pessoa-texto strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lateral-pessoa .pessoa-texto span {
+  color: rgb(255 255 255 / 0.55);
+  font-size: 12.5px;
+}
+
+.lateral-acoes {
+  display: flex;
+  gap: 6px;
+}
+
+.lateral-acao {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  white-space: nowrap;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 10px;
+  background: transparent;
+  color: rgb(255 255 255 / 0.75);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.lateral-acao:last-child {
+  flex: 0 0 auto;
+}
+
+.lateral-acao:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+}
+
+.lateral-acao:focus-visible {
+  outline: 2px solid var(--laranja);
+  outline-offset: 2px;
+}
