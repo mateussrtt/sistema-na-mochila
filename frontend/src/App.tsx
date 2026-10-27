@@ -9,6 +9,7 @@ import EmConstrucao from './pages/EmConstrucao'
 import Entrar from './pages/Entrar'
 import Inicio from './pages/Inicio'
 import NaoEncontrada from './pages/NaoEncontrada'
+import Usuarios from './pages/usuarios/Usuarios'
 import RotaProtegida from './sessao/RotaProtegida'
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="despesas" element={<EmConstrucao titulo="Despesas" />} />
           <Route path="receitas" element={<EmConstrucao titulo="Receitas e patrocínios" />} />
           <Route path="caixa" element={<EmConstrucao titulo="Saldo e fluxo de caixa" />} />
+          <Route path="usuarios" element={<Usuarios />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Route>
       </Route>

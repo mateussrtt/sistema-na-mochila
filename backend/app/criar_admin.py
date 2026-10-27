@@ -14,8 +14,7 @@ from app.core.config import get_settings
 from app.core.seguranca import gerar_hash
 from app.db.session import SessionLocal
 from app.models import Perfil, Usuario
-
-SENHA_MINIMA = 8
+from app.schemas.usuario import SENHA_MINIMA
 
 
 def criar_admin(db: Session, nome: str, email: str, senha: str) -> str:

@@ -63,13 +63,23 @@ def sem_login(db: Session) -> Iterator[TestClient]:
 
 
 @pytest.fixture
-def api_como(sem_login: TestClient, cria_usuario) -> Callable[[Perfil], TestClient]:
+def logado_como(sem_login: TestClient) -> Callable[[Usuario], TestClient]:
+    """Devolve um cliente logado como o usuário informado."""
+
+    def logar(usuario: Usuario) -> TestClient:
+        cliente = TestClient(app)
+        cliente.headers["Authorization"] = f"Bearer {criar_token(usuario.id)}"
+        return cliente
+
+    return logar
+
+
+@pytest.fixture
+def api_como(logado_como, cria_usuario) -> Callable[[Perfil], TestClient]:
     """Devolve um cliente logado com o perfil pedido."""
 
     def logar(perfil: Perfil) -> TestClient:
-        cliente = TestClient(app)
-        cliente.headers["Authorization"] = f"Bearer {criar_token(cria_usuario(perfil).id)}"
-        return cliente
+        return logado_como(cria_usuario(perfil))
 
     return logar
 
