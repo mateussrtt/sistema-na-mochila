@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.acesso import LOGADO, PODE_EDITAR
 from app.db.session import get_db
 from app.models import Responsavel
 from app.schemas.comum import ID_MAXIMO, termo_de_busca
 from app.schemas.responsavel import ResponsavelEntrada, ResponsavelLeitura
 
-router = APIRouter(prefix="/responsaveis", tags=["responsáveis"])
+# Todas as rotas exigem login. As que alteram dados exigem perfil de operador ou administrador
+router = APIRouter(prefix="/responsaveis", tags=["responsáveis"], dependencies=[LOGADO])
 
 Banco = Annotated[Session, Depends(get_db)]
 ResponsavelId = Annotated[int, Path(gt=0, le=ID_MAXIMO)]
@@ -32,7 +34,12 @@ def listar(db: Banco, busca: str | None = None) -> list[Responsavel]:
     return list(db.scalars(consulta))
 
 
-@router.post("", response_model=ResponsavelLeitura, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ResponsavelLeitura,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[PODE_EDITAR],
+)
 def cadastrar(dados: ResponsavelEntrada, db: Banco) -> Responsavel:
     responsavel = Responsavel(**dados.model_dump())
     db.add(responsavel)
@@ -45,7 +52,7 @@ def consultar(responsavel_id: ResponsavelId, db: Banco) -> Responsavel:
     return busca_responsavel(db, responsavel_id)
 
 
-@router.put("/{responsavel_id}", response_model=ResponsavelLeitura)
+@router.put("/{responsavel_id}", response_model=ResponsavelLeitura, dependencies=[PODE_EDITAR])
 def editar(responsavel_id: ResponsavelId, dados: ResponsavelEntrada, db: Banco) -> Responsavel:
     responsavel = busca_responsavel(db, responsavel_id)
     for campo, valor in dados.model_dump().items():

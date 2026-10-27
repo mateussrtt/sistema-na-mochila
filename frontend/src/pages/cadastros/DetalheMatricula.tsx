@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { encerrarMatricula, type Matricula } from '../../api/cadastros'
 import { ApiError } from '../../api/client'
 import Campo from '../../components/Campo'
+import { useSessao } from '../../sessao/contexto'
 import { ligacaoDoCampo } from '../../utils/campo'
 import { formatarData, formatarMoeda, hojeIso } from '../../utils/formato'
 
@@ -17,7 +18,10 @@ export default function DetalheMatricula({ matricula, aoEncerrar, aoFechar }: Pr
   const [data, setData] = useState(hojeIso())
   const [erro, setErro] = useState<string | undefined>()
   const [salvando, setSalvando] = useState(false)
+  const { podeEditar } = useSessao()
   const ativa = matricula.situacao === 'ativa'
+  // O perfil de consulta vê os dados, mas não encerra
+  const encerravel = ativa && podeEditar
 
   async function aoEnviar(evento: FormEvent) {
     evento.preventDefault()
@@ -62,7 +66,7 @@ export default function DetalheMatricula({ matricula, aoEncerrar, aoFechar }: Pr
           </dd>
         </dl>
 
-        {ativa ? (
+        {encerravel && (
           <fieldset className="grupo">
             <legend>Encerrar matrícula</legend>
             <Campo
@@ -85,7 +89,8 @@ export default function DetalheMatricula({ matricula, aoEncerrar, aoFechar }: Pr
               />
             </Campo>
           </fieldset>
-        ) : (
+        )}
+        {!ativa && (
           <p className="campo-dica">
             Esta matrícula está encerrada. O histórico financeiro continua guardado.
           </p>
@@ -98,7 +103,7 @@ export default function DetalheMatricula({ matricula, aoEncerrar, aoFechar }: Pr
           <button type="button" className="botao botao-texto" onClick={aoFechar}>
             Fechar
           </button>
-          {ativa && (
+          {encerravel && (
             <button type="submit" className="botao botao-principal" disabled={salvando}>
               {salvando ? 'Encerrando…' : 'Encerrar matrícula'}
             </button>

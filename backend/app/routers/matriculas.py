@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
+from app.core.acesso import LOGADO, PODE_EDITAR
 from app.db.session import get_db
 from app.models import Aluno, Matricula, SituacaoMatricula
 from app.schemas.matricula import (
@@ -14,7 +15,8 @@ from app.schemas.matricula import (
     MatriculaLeitura,
 )
 
-router = APIRouter(prefix="/matriculas", tags=["matrículas"])
+# Todas as rotas exigem login. As que alteram dados exigem perfil de operador ou administrador
+router = APIRouter(prefix="/matriculas", tags=["matrículas"], dependencies=[LOGADO])
 
 Banco = Annotated[Session, Depends(get_db)]
 MatriculaId = Annotated[int, Path(gt=0, le=ID_MAXIMO)]
@@ -78,7 +80,12 @@ def listar(
     return list(db.scalars(consulta))
 
 
-@router.post("", response_model=MatriculaLeitura, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=MatriculaLeitura,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[PODE_EDITAR],
+)
 def matricular(dados: MatriculaEntrada, db: Banco) -> Matricula:
     aluno = db.get(Aluno, dados.aluno_id)
     if aluno is None:
@@ -110,7 +117,9 @@ def consultar(matricula_id: MatriculaId, db: Banco) -> Matricula:
     return busca_matricula(db, matricula_id)
 
 
-@router.patch("/{matricula_id}/encerrar", response_model=MatriculaLeitura)
+@router.patch(
+    "/{matricula_id}/encerrar", response_model=MatriculaLeitura, dependencies=[PODE_EDITAR]
+)
 def encerrar(matricula_id: MatriculaId, dados: MatriculaEncerramento, db: Banco) -> Matricula:
     """Encerra a matrícula. Nada é apagado: o histórico financeiro continua."""
     matricula = busca_matricula(db, matricula_id, bloquear=True)

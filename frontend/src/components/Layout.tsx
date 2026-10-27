@@ -2,6 +2,7 @@ import {
   ChartNoAxesColumn,
   HandCoins,
   House,
+  LogOut,
   Menu,
   ReceiptText,
   TrendingDown,
@@ -10,6 +11,10 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
+
+import { NOME_DO_PERFIL } from '../api/auth'
+import { useSessao } from '../sessao/contexto'
+import Monograma from './Monograma'
 
 const menu = [
   { to: '/', rotulo: 'Início', Icone: House },
@@ -22,6 +27,7 @@ const menu = [
 
 export default function Layout() {
   const [menuAberto, setMenuAberto] = useState(false)
+  const { usuario, sair } = useSessao()
 
   return (
     <div className="app">
@@ -57,7 +63,24 @@ export default function Layout() {
           ))}
         </nav>
 
-        <p className="lateral-rodape">Robótica educacional no Médio Piracicaba</p>
+        {usuario && (
+          <div className="lateral-usuario">
+            <Monograma nome={usuario.nome} tamanho="p" />
+            <span className="pessoa-texto">
+              <strong>{usuario.nome}</strong>
+              <span>{NOME_DO_PERFIL[usuario.perfil]}</span>
+            </span>
+            <button
+              type="button"
+              className="botao-icone"
+              aria-label="Sair"
+              title="Sair"
+              onClick={sair}
+            >
+              <LogOut size={18} aria-hidden="true" />
+            </button>
+          </div>
+        )}
       </aside>
 
       <main className="conteudo">

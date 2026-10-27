@@ -3,6 +3,7 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { salvarResponsavel, type Responsavel } from '../../api/cadastros'
 import { ApiError } from '../../api/client'
 import Campo from '../../components/Campo'
+import { useSessao } from '../../sessao/contexto'
 import { ligacaoDoCampo } from '../../utils/campo'
 import { emailValido, mascaraTelefone, telefoneValido } from '../../utils/formato'
 
@@ -37,6 +38,7 @@ export default function FormResponsavel({
   aoSalvar,
   aoCancelar,
 }: Props) {
+  const { podeEditar } = useSessao()
   const [nome, setNome] = useState(responsavel?.nome ?? nomeInicial)
   const [telefone, setTelefone] = useState(mascaraTelefone(responsavel?.telefone ?? ''))
   const [email, setEmail] = useState(responsavel?.email ?? '')
@@ -150,17 +152,21 @@ export default function FormResponsavel({
 
   return (
     <form className="gaveta-formulario" noValidate onSubmit={aoEnviar}>
-      <div className="gaveta-conteudo">{campos}</div>
+      <fieldset className="gaveta-conteudo" disabled={!podeEditar}>
+        {campos}
+      </fieldset>
       <footer className="gaveta-rodape">
         <span />
         <div className="gaveta-rodape-acoes">
           <button type="button" className="botao botao-texto" onClick={aoCancelar}>
-            Cancelar
+            {podeEditar ? 'Cancelar' : 'Fechar'}
           </button>
-          <button type="submit" className="botao botao-principal" disabled={salvando}>
-            {salvando && 'Salvando…'}
-            {!salvando && (responsavel ? 'Salvar alterações' : 'Cadastrar responsável')}
-          </button>
+          {podeEditar && (
+            <button type="submit" className="botao botao-principal" disabled={salvando}>
+              {salvando && 'Salvando…'}
+              {!salvando && (responsavel ? 'Salvar alterações' : 'Cadastrar responsável')}
+            </button>
+          )}
         </div>
       </footer>
     </form>

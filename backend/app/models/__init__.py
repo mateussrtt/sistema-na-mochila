@@ -8,12 +8,15 @@ from app.db.base import Base
 from app.models.aluno import Aluno, aluno_responsavel
 from app.models.matricula import Matricula, SituacaoMatricula
 from app.models.responsavel import Responsavel
+from app.models.usuario import Perfil, Usuario
 
 __all__ = [
     "Aluno",
     "Base",
     "Matricula",
+    "Perfil",
     "Responsavel",
     "SituacaoMatricula",
+    "Usuario",
     "aluno_responsavel",
 ]

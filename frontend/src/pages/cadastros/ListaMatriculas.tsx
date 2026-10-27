@@ -8,6 +8,7 @@ import { Carregando, FalhaAoCarregar, Vazio } from '../../components/EstadoLista
 import Gaveta from '../../components/Gaveta'
 import Monograma from '../../components/Monograma'
 import { useAtraso } from '../../hooks/useAtraso'
+import { useSessao } from '../../sessao/contexto'
 import { formatarData, formatarMoeda, plural } from '../../utils/formato'
 import DetalheMatricula from './DetalheMatricula'
 import FormMatricula from './FormMatricula'
@@ -38,6 +39,7 @@ export default function ListaMatriculas() {
   const [gaveta, setGaveta] = useState<Gaveta>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const buscaAtrasada = useAtraso(busca.trim())
+  const { podeEditar } = useSessao()
 
   useEffect(() => {
     const controle = new AbortController()
@@ -86,14 +88,16 @@ export default function ListaMatriculas() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className="botao botao-principal botao-com-icone"
-          onClick={() => setGaveta({ modo: 'nova' })}
-        >
-          <Plus size={18} aria-hidden="true" />
-          Nova matrícula
-        </button>
+        {podeEditar && (
+          <button
+            type="button"
+            className="botao botao-principal botao-com-icone"
+            onClick={() => setGaveta({ modo: 'nova' })}
+          >
+            <Plus size={18} aria-hidden="true" />
+            Nova matrícula
+          </button>
+        )}
       </div>
 
       {falhou ? (
@@ -116,14 +120,16 @@ export default function ListaMatriculas() {
             titulo="Nenhuma matrícula ainda"
             texto="Matricule um aluno e defina o valor da mensalidade para que ela passe a ser cobrada."
           >
-            <button
-              type="button"
-              className="botao botao-principal botao-com-icone"
-              onClick={() => setGaveta({ modo: 'nova' })}
-            >
-              <Plus size={18} aria-hidden="true" />
-              Nova matrícula
-            </button>
+            {podeEditar && (
+              <button
+                type="button"
+                className="botao botao-principal botao-com-icone"
+                onClick={() => setGaveta({ modo: 'nova' })}
+              >
+                <Plus size={18} aria-hidden="true" />
+                Nova matrícula
+              </button>
+            )}
           </Vazio>
         )
       ) : (
@@ -171,9 +177,11 @@ export default function ListaMatriculas() {
         aberta={gaveta !== null}
         titulo={gaveta?.modo === 'detalhe' ? gaveta.matricula.aluno.nome : 'Nova matrícula'}
         descricao={
-          gaveta?.modo === 'detalhe'
-            ? 'Dados da matrícula e encerramento.'
-            : 'Escolha o aluno e defina o valor da mensalidade.'
+          gaveta?.modo !== 'detalhe'
+            ? 'Escolha o aluno e defina o valor da mensalidade.'
+            : podeEditar
+              ? 'Dados da matrícula e encerramento.'
+              : 'Dados da matrícula. Seu perfil pode consultar, mas não alterar.'
         }
         aoFechar={() => setGaveta(null)}
       >

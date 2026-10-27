@@ -11,6 +11,7 @@ import {
 import { ApiError } from '../../api/client'
 import Campo from '../../components/Campo'
 import Monograma from '../../components/Monograma'
+import { useSessao } from '../../sessao/contexto'
 import { ligacaoDoCampo } from '../../utils/campo'
 import { formatarMoeda, hojeIso } from '../../utils/formato'
 import FormResponsavel from './FormResponsavel'
@@ -25,6 +26,8 @@ type Props = {
 type Erros = Partial<Record<'nome' | 'data_nascimento' | 'responsaveis' | 'geral', string>>
 
 export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
+  // O perfil de consulta abre o painel só para ver os dados
+  const { podeEditar } = useSessao()
   const [nome, setNome] = useState(aluno?.nome ?? '')
   const [nascimento, setNascimento] = useState(aluno?.data_nascimento ?? '')
   const [escola, setEscola] = useState(aluno?.escola ?? '')
@@ -120,7 +123,7 @@ export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
 
   return (
     <form className="gaveta-formulario" noValidate onSubmit={aoEnviar}>
-      <div className="gaveta-conteudo">
+      <fieldset className="gaveta-conteudo" disabled={!podeEditar}>
         <Campo id="aluno-nome" rotulo="Nome do aluno" erro={erros.nome}>
           <input
             {...ligacaoDoCampo('aluno-nome', erros.nome)}
@@ -176,20 +179,22 @@ export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
                     <strong>{r.nome}</strong>
                     <span>{[r.telefone, r.email].filter(Boolean).join(', ')}</span>
                   </span>
-                  <button
-                    type="button"
-                    className="botao-icone"
-                    aria-label={`Desvincular ${r.nome}`}
-                    onClick={() => setResponsaveis((lista) => lista.filter((x) => x.id !== r.id))}
-                  >
-                    <X size={18} />
-                  </button>
+                  {podeEditar && (
+                    <button
+                      type="button"
+                      className="botao-icone"
+                      aria-label={`Desvincular ${r.nome}`}
+                      onClick={() => setResponsaveis((lista) => lista.filter((x) => x.id !== r.id))}
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
           )}
 
-          {novoResponsavel === null ? (
+          {!podeEditar ? null : novoResponsavel === null ? (
             <>
               <SeletorResponsavel
                 idsVinculados={responsaveis.map((r) => r.id)}
@@ -257,10 +262,10 @@ export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
             {erros.geral}
           </p>
         )}
-      </div>
+      </fieldset>
 
       <footer className="gaveta-rodape">
-        {aluno ? (
+        {aluno && podeEditar ? (
           <button
             type="button"
             className="botao botao-texto botao-com-icone"
@@ -279,11 +284,13 @@ export default function FormAluno({ aluno, aoSalvar, aoCancelar }: Props) {
         )}
         <div className="gaveta-rodape-acoes">
           <button type="button" className="botao botao-texto" onClick={aoCancelar}>
-            Cancelar
+            {podeEditar ? 'Cancelar' : 'Fechar'}
           </button>
-          <button type="submit" className="botao botao-principal" disabled={salvando}>
-            {salvando ? 'Salvando…' : aluno ? 'Salvar alterações' : 'Cadastrar aluno'}
-          </button>
+          {podeEditar && (
+            <button type="submit" className="botao botao-principal" disabled={salvando}>
+              {salvando ? 'Salvando…' : aluno ? 'Salvar alterações' : 'Cadastrar aluno'}
+            </button>
+          )}
         </div>
       </footer>
     </form>
