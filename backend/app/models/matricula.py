@@ -2,7 +2,7 @@ import enum
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Numeric, func, text
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Index, Numeric, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -12,6 +12,14 @@ from app.models.aluno import Aluno
 class SituacaoMatricula(enum.StrEnum):
     ATIVA = "ativa"
     ENCERRADA = "encerrada"
+
+
+class Bolsa(enum.StrEnum):
+    """Bolsa concedida pela associação. Com bolsa integral, o aluno não paga mensalidade."""
+
+    NENHUMA = "nenhuma"
+    PARCIAL = "parcial"
+    INTEGRAL = "integral"
 
 
 class Matricula(Base):
@@ -24,6 +32,12 @@ class Matricula(Base):
             unique=True,
             postgresql_where=text("situacao = 'ativa'"),
         ),
+        # Bolsa integral tem mensalidade zero; nos outros casos o valor precisa ser positivo
+        CheckConstraint(
+            "(bolsa = 'integral' AND valor_mensalidade = 0)"
+            " OR (bolsa <> 'integral' AND valor_mensalidade > 0)",
+            name="valor_conforme_bolsa",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -33,6 +47,18 @@ class Matricula(Base):
     data_encerramento: Mapped[date | None]
     # O valor é definido em cada matrícula, então alunos diferentes podem pagar valores diferentes
     valor_mensalidade: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    bolsa: Mapped[Bolsa] = mapped_column(
+        Enum(
+            Bolsa,
+            name="bolsa",
+            native_enum=False,
+            length=10,
+            create_constraint=True,
+            values_callable=lambda bolsas: [b.value for b in bolsas],
+        ),
+        default=Bolsa.NENHUMA,
+        server_default=Bolsa.NENHUMA.value,
+    )
     situacao: Mapped[SituacaoMatricula] = mapped_column(
         Enum(
             SituacaoMatricula,

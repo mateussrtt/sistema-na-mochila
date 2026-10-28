@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
-import { encerrarMatricula, type Matricula } from '../../api/cadastros'
+import { encerrarMatricula, NOME_DA_BOLSA, type Matricula } from '../../api/cadastros'
 import { ApiError } from '../../api/client'
 import Campo from '../../components/Campo'
 import { useSessao } from '../../sessao/contexto'
@@ -55,7 +55,13 @@ export default function DetalheMatricula({ matricula, aoEncerrar, aoFechar }: Pr
       <div className="gaveta-conteudo">
         <dl className="dados">
           <dt>Mensalidade</dt>
-          <dd>{formatarMoeda(matricula.valor_mensalidade)}</dd>
+          <dd>
+            {matricula.bolsa === 'integral'
+              ? 'Não paga'
+              : formatarMoeda(matricula.valor_mensalidade)}
+          </dd>
+          <dt>Bolsa</dt>
+          <dd>{NOME_DA_BOLSA[matricula.bolsa]}</dd>
           <dt>Início</dt>
           <dd>{formatarData(matricula.data_inicio)}</dd>
           <dt>Situação</dt>

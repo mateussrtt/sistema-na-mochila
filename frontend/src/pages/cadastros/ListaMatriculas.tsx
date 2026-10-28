@@ -1,7 +1,12 @@
-import { CalendarDays, ChevronRight, Plus } from 'lucide-react'
+import { CalendarDays, ChevronRight, GraduationCap, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { listarMatriculas, type Matricula, type SituacaoMatricula } from '../../api/cadastros'
+import {
+  listarMatriculas,
+  NOME_DA_BOLSA,
+  type Matricula,
+  type SituacaoMatricula,
+} from '../../api/cadastros'
 import Aviso from '../../components/Aviso'
 import Busca from '../../components/Busca'
 import { Carregando, FalhaAoCarregar, Vazio } from '../../components/EstadoLista'
@@ -21,18 +26,26 @@ const SITUACOES: { valor: SituacaoMatricula; rotulo: string }[] = [
 
 type Gaveta = { modo: 'nova' } | { modo: 'detalhe'; matricula: Matricula } | null
 
-function resumo(total: number, situacao: SituacaoMatricula, busca: string): string {
+function resumo(
+  total: number,
+  situacao: SituacaoMatricula,
+  busca: string,
+  soBolsistas: boolean,
+): string {
   const matriculas = plural(total, 'matrícula', 'matrículas')
   const sufixo = total === 1 ? '' : 's'
   const filtro = { ativas: ` ativa${sufixo}`, encerradas: ` encerrada${sufixo}`, todas: '' }[
     situacao
   ]
-  return busca ? `${matriculas}${filtro} para “${busca}”` : `${matriculas}${filtro}`
+  const bolsistas = soBolsistas ? ' com bolsa' : ''
+  const texto = `${matriculas}${filtro}${bolsistas}`
+  return busca ? `${texto} para “${busca}”` : texto
 }
 
 export default function ListaMatriculas() {
   const [busca, setBusca] = useState('')
   const [situacao, setSituacao] = useState<SituacaoMatricula>('ativas')
+  const [soBolsistas, setSoBolsistas] = useState(false)
   const [matriculas, setMatriculas] = useState<Matricula[] | null>(null)
   const [falhou, setFalhou] = useState(false)
   const [versao, setVersao] = useState(0)
@@ -43,7 +56,7 @@ export default function ListaMatriculas() {
 
   useEffect(() => {
     const controle = new AbortController()
-    listarMatriculas(buscaAtrasada, situacao, controle.signal)
+    listarMatriculas(buscaAtrasada, situacao, soBolsistas, controle.signal)
       .then((lista) => {
         setMatriculas(lista)
         setFalhou(false)
@@ -52,7 +65,7 @@ export default function ListaMatriculas() {
         if (!controle.signal.aborted) setFalhou(true)
       })
     return () => controle.abort()
-  }, [buscaAtrasada, situacao, versao])
+  }, [buscaAtrasada, situacao, soBolsistas, versao])
 
   function recarregar() {
     setFalhou(false)
@@ -88,6 +101,15 @@ export default function ListaMatriculas() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className="filtro-chip"
+          aria-pressed={soBolsistas}
+          onClick={() => setSoBolsistas((v) => !v)}
+        >
+          <GraduationCap size={16} aria-hidden="true" />
+          Só bolsistas
+        </button>
         {podeEditar && (
           <button
             type="button"
@@ -105,7 +127,12 @@ export default function ListaMatriculas() {
       ) : matriculas === null ? (
         <Carregando />
       ) : matriculas.length === 0 ? (
-        buscaAtrasada ? (
+        soBolsistas && !buscaAtrasada ? (
+          <Vazio
+            titulo="Nenhum bolsista nesta lista"
+            texto="Matrículas com bolsa parcial ou integral aparecem aqui."
+          />
+        ) : buscaAtrasada ? (
           <Vazio
             titulo={`Nenhuma matrícula encontrada para “${buscaAtrasada}”`}
             texto="Confira a grafia do nome do aluno."
@@ -134,10 +161,13 @@ export default function ListaMatriculas() {
         )
       ) : (
         <>
-          <p className="resumo">{resumo(matriculas.length, situacao, buscaAtrasada)}</p>
+          <p className="resumo">
+            {resumo(matriculas.length, situacao, buscaAtrasada, soBolsistas)}
+          </p>
           <ul className="lista">
             {matriculas.map((matricula) => {
               const encerrada = matricula.situacao === 'encerrada'
+              const temBolsa = matricula.bolsa !== 'nenhuma'
               return (
                 <li key={matricula.id}>
                   <button
@@ -149,6 +179,11 @@ export default function ListaMatriculas() {
                     <span className="linha-principal">
                       <span className="linha-titulo">
                         {matricula.aluno.nome}
+                        {temBolsa && (
+                          <span className="etiqueta etiqueta-bolsa">
+                            {NOME_DA_BOLSA[matricula.bolsa]}
+                          </span>
+                        )}
                         {encerrada && <span className="etiqueta">Encerrada</span>}
                       </span>
                       <span className="linha-detalhes">
@@ -162,7 +197,11 @@ export default function ListaMatriculas() {
                     </span>
                     <span className="linha-lateral">
                       <span className="linha-rotulo">Mensalidade</span>
-                      <span>{formatarMoeda(matricula.valor_mensalidade)}</span>
+                      <span>
+                        {matricula.bolsa === 'integral'
+                          ? 'Não paga'
+                          : formatarMoeda(matricula.valor_mensalidade)}
+                      </span>
                     </span>
                     <ChevronRight size={18} className="linha-seta" aria-hidden="true" />
                   </button>

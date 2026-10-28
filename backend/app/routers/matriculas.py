@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, contains_eager, joinedload
 
 from app.core.acesso import LOGADO, PODE_EDITAR
 from app.db.session import get_db
-from app.models import Aluno, Matricula, SituacaoMatricula
+from app.models import Aluno, Bolsa, Matricula, SituacaoMatricula
 from app.schemas.matricula import (
     ID_MAXIMO,
     MatriculaEncerramento,
@@ -56,6 +56,7 @@ def listar(
     busca: str | None = None,
     situacao: Literal["ativas", "encerradas", "todas"] = "ativas",
     aluno_id: Annotated[int | None, Query(gt=0, le=ID_MAXIMO)] = None,
+    so_bolsistas: bool = False,
 ) -> list[Matricula]:
     """Lista as matrículas em ordem alfabética pelo nome do aluno.
 
@@ -72,6 +73,8 @@ def listar(
         consulta = consulta.where(Matricula.situacao == esperada)
     if aluno_id is not None:
         consulta = consulta.where(Matricula.aluno_id == aluno_id)
+    if so_bolsistas:
+        consulta = consulta.where(Matricula.bolsa != Bolsa.NENHUMA)
     # O PostgreSQL não aceita o caractere nulo (\x00) em texto; ele é descartado
     termo = busca.replace("\x00", "").strip() if busca else ""
     if termo:
@@ -99,7 +102,10 @@ def matricular(dados: MatriculaEntrada, db: Banco) -> Matricula:
         raise HTTPException(status.HTTP_409_CONFLICT, JA_MATRICULADO)
 
     matricula = Matricula(
-        aluno=aluno, data_inicio=dados.data_inicio, valor_mensalidade=dados.valor_mensalidade
+        aluno=aluno,
+        data_inicio=dados.data_inicio,
+        valor_mensalidade=dados.valor_mensalidade,
+        bolsa=dados.bolsa,
     )
     db.add(matricula)
     try:
