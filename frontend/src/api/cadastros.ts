@@ -61,6 +61,15 @@ export type AlunoResumo = {
   ativo: boolean
 }
 
+/** Com bolsa integral o aluno não paga; com bolsa parcial paga um valor menor */
+export type Bolsa = 'nenhuma' | 'parcial' | 'integral'
+
+export const NOME_DA_BOLSA: Record<Bolsa, string> = {
+  nenhuma: 'Sem bolsa',
+  parcial: 'Bolsa parcial',
+  integral: 'Bolsa integral',
+}
+
 export type Matricula = {
   id: number
   aluno: AlunoResumo
@@ -68,19 +77,26 @@ export type Matricula = {
   data_encerramento: string | null
   /** Vem como texto ("150.00") para não perder as casas decimais */
   valor_mensalidade: string
+  bolsa: Bolsa
   situacao: 'ativa' | 'encerrada'
 }
 
 export type MatriculaEntrada = {
   aluno_id: number
   data_inicio: string
+  bolsa: Bolsa
   valor_mensalidade: string
 }
 
 export type SituacaoMatricula = 'ativas' | 'encerradas' | 'todas'
 
-export function listarMatriculas(busca: string, situacao: SituacaoMatricula, signal?: AbortSignal) {
-  const parametros = new URLSearchParams({ busca, situacao })
+export function listarMatriculas(
+  busca: string,
+  situacao: SituacaoMatricula,
+  soBolsistas: boolean,
+  signal?: AbortSignal,
+) {
+  const parametros = new URLSearchParams({ busca, situacao, so_bolsistas: String(soBolsistas) })
   return apiGet<Matricula[]>(`/api/matriculas?${parametros}`, signal)
 }
 

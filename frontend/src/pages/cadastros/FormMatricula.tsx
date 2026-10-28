@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 
-import { matricularAluno, type Aluno } from '../../api/cadastros'
+import { matricularAluno, NOME_DA_BOLSA, type Aluno, type Bolsa } from '../../api/cadastros'
 import { ApiError } from '../../api/client'
 import Campo from '../../components/Campo'
 import Monograma from '../../components/Monograma'
@@ -16,6 +16,8 @@ type Props = {
 
 type Erros = Partial<Record<'aluno' | 'data_inicio' | 'valor' | 'geral', string>>
 
+const BOLSAS: Bolsa[] = ['nenhuma', 'parcial', 'integral']
+
 function erroDoValor(texto: string): string | undefined {
   const limpo = texto.trim()
   if (!limpo) return 'Informe o valor da mensalidade.'
@@ -29,6 +31,8 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
   const [aluno, setAluno] = useState<Aluno | null>(null)
   const [inicio, setInicio] = useState(hojeIso())
   const [valor, setValor] = useState('')
+  const [bolsa, setBolsa] = useState<Bolsa>('nenhuma')
+  const integral = bolsa === 'integral'
   const [tentou, setTentou] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erroApi, setErroApi] = useState<Erros>({})
@@ -37,7 +41,7 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
     const erros: Erros = {}
     if (!aluno) erros.aluno = 'Escolha o aluno que será matriculado.'
     if (!inicio) erros.data_inicio = 'Informe a data de início.'
-    const erroValor = erroDoValor(valor)
+    const erroValor = integral ? undefined : erroDoValor(valor)
     if (erroValor) erros.valor = erroValor
     return erros
   }
@@ -55,9 +59,10 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
       await matricularAluno({
         aluno_id: aluno.id,
         data_inicio: inicio,
-        valor_mensalidade: valor.trim().replace(',', '.'),
+        bolsa,
+        valor_mensalidade: integral ? '0' : valor.trim().replace(',', '.'),
       })
-      aoSalvar('Matrícula registrada')
+      aoSalvar(integral ? 'Matrícula com bolsa integral registrada' : 'Matrícula registrada')
     } catch (erro) {
       const campos = erro instanceof ApiError ? erro.campos : {}
       const doServidor: Erros = {}
@@ -108,6 +113,22 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
           )}
         </fieldset>
 
+        <fieldset className="grupo">
+          <legend>Bolsa</legend>
+          <div className="segmentos segmentos-largos" role="group" aria-label="Bolsa">
+            {BOLSAS.map((b) => (
+              <button key={b} type="button" aria-pressed={bolsa === b} onClick={() => setBolsa(b)}>
+                {NOME_DA_BOLSA[b]}
+              </button>
+            ))}
+          </div>
+          <p className="campo-dica">
+            {bolsa === 'nenhuma' && 'O aluno paga o valor cheio da mensalidade.'}
+            {bolsa === 'parcial' && 'Informe abaixo o valor que a família paga, já com o desconto.'}
+            {integral && 'Bolsista integral não paga mensalidade e não entra nas cobranças.'}
+          </p>
+        </fieldset>
+
         <div className="campos-lado-a-lado">
           <Campo id="matricula-inicio" rotulo="Data de início" erro={erros.data_inicio}>
             <input
@@ -117,13 +138,18 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
               onChange={(e) => setInicio(e.target.value)}
             />
           </Campo>
-          <Campo id="matricula-valor" rotulo="Valor da mensalidade (R$)" erro={erros.valor}>
+          <Campo
+            id="matricula-valor"
+            rotulo={bolsa === 'parcial' ? 'Valor com desconto (R$)' : 'Valor da mensalidade (R$)'}
+            erro={erros.valor}
+          >
             <input
               {...ligacaoDoCampo('matricula-valor', erros.valor)}
               inputMode="decimal"
               placeholder="0,00"
               autoComplete="off"
-              value={valor}
+              disabled={integral}
+              value={integral ? '0,00' : valor}
               onChange={(e) => setValor(e.target.value)}
             />
           </Campo>

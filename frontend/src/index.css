@@ -1558,3 +1558,51 @@ fieldset.gaveta-conteudo {
   outline: 2px solid var(--laranja);
   outline-offset: 2px;
 }
+
+/* ===== Bolsas ===== */
+.segmentos-largos {
+  display: flex;
+  width: 100%;
+}
+
+.segmentos-largos button {
+  flex: 1;
+}
+
+.etiqueta-bolsa {
+  background: var(--agua-suave);
+  color: var(--agua);
+}
+
+.filtro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--linha-forte);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--tinta-suave);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.filtro-chip:hover {
+  border-color: var(--tinta-suave);
+  color: var(--tinta);
+}
+
+.filtro-chip[aria-pressed='true'] {
+  border-color: var(--agua);
+  background: var(--agua-suave);
+  color: var(--agua);
+}
+
+.filtro-chip:focus-visible {
+  outline: 3px solid rgb(20 33 61 / 0.25);
+  outline-offset: 2px;
+}

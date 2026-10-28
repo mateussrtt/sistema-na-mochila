@@ -19,7 +19,7 @@ export default function SeletorAluno({ aoEscolher, invalido }: Props) {
 
   useEffect(() => {
     const controle = new AbortController()
-    listarMatriculas('', 'ativas', controle.signal)
+    listarMatriculas('', 'ativas', false, controle.signal)
       .then((lista) => setMatriculados(new Set(lista.map((m) => m.aluno.id))))
       .catch(() => {
         // sem a lista, a API ainda recusa quem já tem matrícula ativa
