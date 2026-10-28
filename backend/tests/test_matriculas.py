@@ -268,6 +268,7 @@ def test_resposta_nao_expoe_contatos_dos_responsaveis(api, aluno):
         "data_inicio",
         "data_encerramento",
         "valor_mensalidade",
+        "bolsa",
         "situacao",
     }
     assert set(matricula["aluno"]) == {"id", "nome", "ativo"}

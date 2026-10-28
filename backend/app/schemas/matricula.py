@@ -1,9 +1,9 @@
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
-from app.models import SituacaoMatricula
+from app.models import Bolsa, SituacaoMatricula
 from app.schemas.comum import ID_MAXIMO
 
 
@@ -19,7 +19,9 @@ class MatriculaEntrada(BaseModel):
 
     aluno_id: int = Field(gt=0, le=ID_MAXIMO)
     data_inicio: date
-    valor_mensalidade: Decimal
+    bolsa: Bolsa = Bolsa.NENHUMA
+    # Com bolsa integral o valor pode ficar em branco: a mensalidade é zero
+    valor_mensalidade: Decimal | None = Field(default=None, validate_default=True)
 
     @field_validator("data_inicio", mode="before")
     @classmethod
@@ -32,7 +34,7 @@ class MatriculaEntrada(BaseModel):
         if isinstance(valor, str):
             valor = valor.strip().replace(",", ".")
         if valor is None or valor == "":
-            raise ValueError("Informe o valor da mensalidade")
+            return None
         try:
             numero = Decimal(str(valor))
         except InvalidOperation:
@@ -44,7 +46,13 @@ class MatriculaEntrada(BaseModel):
 
     @field_validator("valor_mensalidade")
     @classmethod
-    def valor_positivo(cls, valor: Decimal) -> Decimal:
+    def valor_conforme_bolsa(cls, valor: Decimal | None, info: ValidationInfo) -> Decimal:
+        if info.data.get("bolsa") == Bolsa.INTEGRAL:
+            if valor not in (None, 0):
+                raise ValueError("Com bolsa integral, a mensalidade é zero")
+            return Decimal("0.00")
+        if valor is None:
+            raise ValueError("Informe o valor da mensalidade")
         if valor <= 0:
             raise ValueError("O valor da mensalidade deve ser maior que zero")
         if valor.as_tuple().exponent < -2:
@@ -92,4 +100,5 @@ class MatriculaLeitura(BaseModel):
     data_inicio: date
     data_encerramento: date | None
     valor_mensalidade: Decimal
+    bolsa: Bolsa
     situacao: SituacaoMatricula
