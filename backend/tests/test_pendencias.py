@@ -181,8 +181,10 @@ def test_mensalidade_paga_nao_entra(api):
 def test_isenta_e_cancelada_nao_entram(api, db, status):
     aluno_em_atraso(api)
     gerar(api, "2026-10")
-    db.execute(update(Mensalidade).values(status=status))
-    db.flush()
+    id_ = api.get("/api/mensalidades", params={"mes": "2026-10"}).json()[0]["id"]
+    acao = "isentar" if status == StatusMensalidade.ISENTA else "cancelar"
+    alteracao = api.patch(f"/api/mensalidades/{id_}/{acao}", json={"motivo": "Motivo de teste"})
+    assert alteracao.status_code == 200
     assert pendencias(api)["resumo"]["mensalidades"] == 0
     assert pendencias(api)["grupos"] == []
 
@@ -200,9 +202,11 @@ def test_so_as_pendentes_vencidas_entram_no_meio_de_varias(api, db):
         ("Carla Isenta", StatusMensalidade.ISENTA),
         ("Davi Cancelado", StatusMensalidade.CANCELADA),
     ):
-        db.execute(
-            update(Mensalidade).where(Mensalidade.id == por_nome[nome]).values(status=status)
+        acao = "isentar" if status == StatusMensalidade.ISENTA else "cancelar"
+        alteracao = api.patch(
+            f"/api/mensalidades/{por_nome[nome]}/{acao}", json={"motivo": "Motivo de teste"}
         )
+        assert alteracao.status_code == 200
     # Edu ainda vai vencer: muda o vencimento direto no banco
     db.execute(
         update(Mensalidade)

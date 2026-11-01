@@ -9,6 +9,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Numeric,
+    String,
     UniqueConstraint,
     and_,
     func,
@@ -17,6 +18,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.matricula import Matricula
+from app.models.usuario import Usuario
 
 # RN06: a mensalidade vence no dia 10 de cada mês
 DIA_DO_VENCIMENTO = 10
@@ -76,6 +78,12 @@ class Mensalidade(Base):
         # A competência é sempre o primeiro dia do mês de referência
         CheckConstraint("EXTRACT(day FROM competencia) = 1", name="competencia_dia_um"),
         CheckConstraint("data_vencimento >= competencia", name="vencimento_depois_da_competencia"),
+        # Isentar ou cancelar exige o motivo, quem fez e quando (RF14, RF26, RN12)
+        CheckConstraint(
+            "status NOT IN ('isenta', 'cancelada') OR (motivo_alteracao IS NOT NULL "
+            "AND alterado_por_id IS NOT NULL AND alterado_em IS NOT NULL)",
+            name="isenta_ou_cancelada_com_motivo",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -100,7 +108,13 @@ class Mensalidade(Base):
     criado_por_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # Preenchidos só quando o administrador isenta ou cancela (RF14). Nada é apagado (RN12)
+    motivo_alteracao: Mapped[str | None] = mapped_column(String(255))
+    alterado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    alterado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     matricula: Mapped[Matricula] = relationship()
+    alterado_por: Mapped[Usuario | None] = relationship(foreign_keys=[alterado_por_id])
 
 
 def esta_atrasada(hoje: date) -> ColumnElement[bool]:

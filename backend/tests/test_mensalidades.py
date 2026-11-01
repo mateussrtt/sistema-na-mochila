@@ -488,8 +488,14 @@ def test_paga_isenta_e_cancelada_nunca_aparecem_como_atrasadas(
     monkeypatch.setattr(tempo, "hoje", lambda: date(2026, 11, 30))  # bem depois do vencimento
     matricula()
     gerar(api)
-    db.scalars(select(Mensalidade)).one().status = status
-    db.flush()
+    id_ = listar(api, mes="2026-11")[0]["id"]
+    if status == StatusMensalidade.PAGA:
+        db.scalars(select(Mensalidade)).one().status = status
+        db.flush()
+    else:
+        acao = "isentar" if status == StatusMensalidade.ISENTA else "cancelar"
+        alteracao = api.patch(f"/api/mensalidades/{id_}/{acao}", json={"motivo": "Motivo de teste"})
+        assert alteracao.status_code == 200
 
     mensalidade = listar(api, mes="2026-11")[0]
     assert mensalidade["situacao"] == esperada
@@ -649,8 +655,17 @@ def test_resposta_traz_so_o_necessario(api, matricula):
         "situacao",
         "dias_em_atraso",
         "pagamento",
+        "motivo",
+        "alterado_por",
+        "alterado_em",
     }
     assert mensalidade["pagamento"] is None  # só a mensalidade paga tem pagamento
+    # E só a isenta ou cancelada tem motivo, quem alterou e quando
+    assert (mensalidade["motivo"], mensalidade["alterado_por"], mensalidade["alterado_em"]) == (
+        None,
+        None,
+        None,
+    )
     assert set(mensalidade["aluno"]) == {"id", "nome", "ativo"}
     assert "31977776666" not in api.get("/api/mensalidades").text  # telefone do responsável
 
