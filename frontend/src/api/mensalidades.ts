@@ -11,6 +11,33 @@ export const NOME_DA_SITUACAO: Record<SituacaoMensalidade, string> = {
   cancelada: 'Cancelada',
 }
 
+export type FormaDePagamento = 'pix' | 'dinheiro' | 'boleto' | 'outra'
+
+export const NOME_DA_FORMA: Record<FormaDePagamento, string> = {
+  pix: 'PIX',
+  dinheiro: 'Dinheiro',
+  boleto: 'Boleto',
+  outra: 'Outra',
+}
+
+export type Pagamento = {
+  data_pagamento: string
+  /** Vem como texto ("150.00") para não perder as casas decimais */
+  valor_pago: string
+  forma_pagamento: FormaDePagamento
+  observacao: string | null
+  registrado_por: string
+  /** Data e hora do registro, em ISO 8601 */
+  registrado_em: string
+}
+
+export type NovoPagamento = {
+  data_pagamento: string
+  valor_pago: string
+  forma_pagamento: FormaDePagamento
+  observacao: string
+}
+
 export type Mensalidade = {
   id: number
   matricula_id: number
@@ -25,6 +52,8 @@ export type Mensalidade = {
   /** Calculada pela API: a vencer só vira atrasada a partir do dia seguinte ao vencimento */
   situacao: SituacaoMensalidade
   dias_em_atraso: number
+  /** Só a mensalidade paga tem pagamento */
+  pagamento: Pagamento | null
 }
 
 export type ResultadoDaGeracao = {
@@ -39,6 +68,10 @@ export type ResultadoDaGeracao = {
 export function listarMensalidades(mes: string, busca: string, signal?: AbortSignal) {
   const parametros = new URLSearchParams({ mes, busca })
   return apiGet<Mensalidade[]>(`/api/mensalidades?${parametros}`, signal)
+}
+
+export function registrarPagamento(id: number, pagamento: NovoPagamento) {
+  return apiEnviar<Mensalidade>('POST', `/api/mensalidades/${id}/pagamento`, pagamento)
 }
 
 export function gerarMensalidades(mes: string) {

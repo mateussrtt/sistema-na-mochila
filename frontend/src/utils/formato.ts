@@ -36,6 +36,22 @@ export function formatarData(iso: string): string {
   return `${dia}/${mes}/${ano}`
 }
 
+/** 2026-11-05T13:30:00Z → 05/11/2026 10:30, sempre no horário de Brasília */
+export function formatarDataHora(iso: string): string {
+  const data = new Date(iso)
+  if (Number.isNaN(data.getTime())) return iso
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(data)
+    .replace(',', '')
+}
+
 export function idade(iso: string): number {
   const [ano, mes, dia] = iso.split('-').map(Number)
   const hoje = new Date()
@@ -63,6 +79,11 @@ export function lerValor(texto: string): number | null {
   const limpo = texto.trim()
   if (!/^\d+([.,]\d{1,2})?$/.test(limpo)) return null
   return Number(limpo.replace(',', '.'))
+}
+
+/** Valor em reais como número inteiro de centavos, para comparar sem erro de arredondamento */
+export function emCentavos(valor: string | number): number {
+  return Math.round(Number(valor) * 100)
 }
 
 export function plural(total: number, singular: string, plural: string): string {

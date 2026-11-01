@@ -25,6 +25,7 @@ import {
   somarMeses,
   somarValores,
 } from '../../utils/formato'
+import DetalheMensalidade from './DetalheMensalidade'
 import GerarMensalidades from './GerarMensalidades'
 
 type Filtro = 'todas' | SituacaoMensalidade
@@ -73,6 +74,8 @@ export default function Mensalidades() {
   const [falhou, setFalhou] = useState(false)
   const [versao, setVersao] = useState(0)
   const [gerando, setGerando] = useState(false)
+  // Mensalidade clicada, aberta no painel de pagamento
+  const [clicada, setClicada] = useState<Mensalidade | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const buscaAtrasada = useAtraso(busca.trim())
   const { podeEditar } = useSessao()
@@ -108,6 +111,16 @@ export default function Mensalidades() {
     recarregar()
   }
 
+  function aoPagar(mensagem: string) {
+    setClicada(null)
+    setAviso(mensagem)
+    recarregar()
+  }
+
+  // Mostra a versão mais nova da lista (ex.: já paga por outra pessoa). Se a lista estiver
+  // recarregando, mantém a que foi clicada, para o painel não sumir no meio do uso
+  const aberta = (lista ?? []).find((m) => m.id === clicada?.id) ?? clicada
+
   const contagem = useMemo(() => {
     const total: Record<Filtro, number> = {
       todas: 0,
@@ -129,7 +142,10 @@ export default function Mensalidades() {
       somarValores((lista ?? []).filter((m) => situacoes.includes(m.situacao)).map((m) => m.valor))
     return {
       cobrado: valores('a_vencer', 'atrasada', 'paga'),
-      pago: valores('paga'),
+      // O que entrou de verdade: pode ser diferente do valor da mensalidade
+      pago: somarValores(
+        (lista ?? []).flatMap((m) => (m.pagamento ? [m.pagamento.valor_pago] : [])),
+      ),
       aVencer: valores('a_vencer'),
       atrasado: valores('atrasada'),
     }
@@ -249,9 +265,11 @@ export default function Mensalidades() {
                 {buscaAtrasada && ` para “${buscaAtrasada}”`}
               </p>
               <ul className="lista">
-                {visiveis.map((m) => (
-                  <li key={m.id}>
-                    <div className="linha linha-parada">
+                {visiveis.map((m) => {
+                  // Paga: qualquer perfil vê os dados. Pendente: só quem pode editar registra o pagamento
+                  const abre = m.status === 'paga' || (m.status === 'pendente' && podeEditar)
+                  const conteudo = (
+                    <>
                       <Monograma nome={m.aluno.nome} apagado={!m.aluno.ativo} />
                       <span className="linha-principal">
                         <span className="linha-titulo">
@@ -274,9 +292,24 @@ export default function Mensalidades() {
                       <span className={`etiqueta etiqueta-${m.situacao}`}>
                         {NOME_DA_SITUACAO[m.situacao]}
                       </span>
-                    </div>
-                  </li>
-                ))}
+                    </>
+                  )
+                  return (
+                    <li key={m.id}>
+                      {abre ? (
+                        <button
+                          type="button"
+                          className="linha linha-parada linha-aberta"
+                          onClick={() => setClicada(m)}
+                        >
+                          {conteudo}
+                        </button>
+                      ) : (
+                        <div className="linha linha-parada">{conteudo}</div>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             </>
           )}
@@ -290,6 +323,25 @@ export default function Mensalidades() {
         aoFechar={() => setGerando(false)}
       >
         <GerarMensalidades mes={mes} aoGerar={aoGerar} aoCancelar={() => setGerando(false)} />
+      </Gaveta>
+
+      <Gaveta
+        aberta={aberta !== null}
+        titulo={aberta?.status === 'pendente' && podeEditar ? 'Registrar pagamento' : 'Pagamento'}
+        descricao={
+          aberta ? `${aberta.aluno.nome} · ${nomeDoMes(aberta.competencia.slice(0, 7))}` : ''
+        }
+        aoFechar={() => setClicada(null)}
+      >
+        {aberta && (
+          <DetalheMensalidade
+            key={aberta.id}
+            mensalidade={aberta}
+            aoPagar={aoPagar}
+            aoDesatualizar={recarregar}
+            aoFechar={() => setClicada(null)}
+          />
+        )}
       </Gaveta>
 
       <Aviso mensagem={aviso} aoSumir={fecharAviso} />
