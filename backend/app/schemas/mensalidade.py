@@ -1,18 +1,20 @@
 import re
-from datetime import date
-from decimal import Decimal
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from pydantic import BaseModel, field_validator
 
 from app.core import tempo
-from app.models import Bolsa, SituacaoMensalidade, StatusMensalidade
-from app.schemas.matricula import AlunoResumo
+from app.models import Bolsa, FormaDePagamento, SituacaoMensalidade, StatusMensalidade
+from app.schemas.comum import texto_valido
+from app.schemas.matricula import AlunoResumo, exige_data
 
 # Só aceita dígitos de 0 a 9 (o "\d" do Python aceitaria também dígitos de outros alfabetos)
 _MES = re.compile(r"^([0-9]{4})-([0-9]{2})(?:-([0-9]{2}))?$")
 
 PRIMEIRO_MES_ACEITO = date(2000, 1, 1)
 MENSAGEM_DO_MES = "Informe o mês no formato AAAA-MM"
+OBSERVACAO_MAXIMA = 255
 
 
 def primeiro_dia_do_mes(valor: object) -> date:
@@ -70,6 +72,84 @@ class GeracaoResultado(BaseModel):
     ainda_nao_comecaram: int
 
 
+class PagamentoEntrada(BaseModel):
+    """Dados enviados para registrar o pagamento de uma mensalidade (RF10)."""
+
+    data_pagamento: date
+    valor_pago: Decimal
+    forma_pagamento: FormaDePagamento
+    observacao: str | None = None
+
+    @field_validator("data_pagamento", mode="before")
+    @classmethod
+    def exige_data_do_pagamento(cls, valor: object) -> object:
+        return exige_data(valor, "Informe a data do pagamento")
+
+    @field_validator("data_pagamento")
+    @classmethod
+    def data_possivel(cls, valor: date) -> date:
+        # RN09: o dinheiro já entrou, então a data não pode ser futura
+        if valor > tempo.hoje():
+            raise ValueError("A data do pagamento não pode ser no futuro")
+        if valor < PRIMEIRO_MES_ACEITO:
+            raise ValueError("Essa data é antiga demais")
+        return valor
+
+    @field_validator("valor_pago", mode="before")
+    @classmethod
+    def le_valor(cls, valor: object) -> object:
+        if isinstance(valor, str):
+            valor = valor.strip().replace(",", ".")
+        if valor is None or valor == "":
+            raise ValueError("Informe o valor pago")
+        try:
+            numero = Decimal(str(valor))
+        except InvalidOperation:
+            raise ValueError("Informe um valor válido") from None
+        if not numero.is_finite():
+            # NaN e Infinity passariam como Decimal, mas quebram a resposta de erro em JSON
+            raise ValueError("Informe um valor válido")
+        return numero
+
+    @field_validator("valor_pago")
+    @classmethod
+    def valor_possivel(cls, valor: Decimal) -> Decimal:
+        if valor <= 0:
+            raise ValueError("O valor pago deve ser maior que zero")
+        if valor.as_tuple().exponent < -2:
+            raise ValueError("Use no máximo 2 casas decimais")
+        if valor >= Decimal(10) ** 8:
+            raise ValueError("O valor pago é alto demais")
+        return valor.quantize(Decimal("0.01"))
+
+    @field_validator("forma_pagamento", mode="before")
+    @classmethod
+    def forma_conhecida(cls, valor: object) -> object:
+        if isinstance(valor, str) and valor in {forma.value for forma in FormaDePagamento}:
+            return valor
+        raise ValueError("Escolha a forma de pagamento: PIX, dinheiro, boleto ou outra")
+
+    @field_validator("observacao")
+    @classmethod
+    def observacao_limpa(cls, valor: str | None) -> str | None:
+        texto = texto_valido(valor)
+        texto = texto.strip() if texto else None
+        if texto and len(texto) > OBSERVACAO_MAXIMA:
+            raise ValueError(f"Use no máximo {OBSERVACAO_MAXIMA} caracteres na observação")
+        return texto or None
+
+
+class PagamentoLeitura(BaseModel):
+    """O pagamento ativo de uma mensalidade, com quem registrou (RF26)."""
+
+    data_pagamento: date
+    valor_pago: Decimal
+    forma_pagamento: FormaDePagamento
+    observacao: str | None
+    registrado_por: str
+    registrado_em: datetime
+
+
 class MensalidadeLeitura(BaseModel):
     """Mensalidade como a API devolve, com o aluno e a situação já calculada."""
 
@@ -83,3 +163,5 @@ class MensalidadeLeitura(BaseModel):
     status: StatusMensalidade
     situacao: SituacaoMensalidade
     dias_em_atraso: int
+    # Só a mensalidade paga tem pagamento
+    pagamento: PagamentoLeitura | None = None

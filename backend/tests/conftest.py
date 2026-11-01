@@ -88,3 +88,42 @@ def api_como(logado_como, cria_usuario) -> Callable[[Perfil], TestClient]:
 def api(api_como) -> TestClient:
     """Cliente da API logado como administrador, que pode fazer tudo."""
     return api_como(Perfil.ADMINISTRADOR)
+
+
+@pytest.fixture
+def novo_aluno(api) -> Callable[..., dict]:
+    """Cria um aluno com responsável. Cada chamada cria um aluno diferente."""
+    contador = 0
+
+    def criar(nome: str | None = None) -> dict:
+        nonlocal contador
+        contador += 1
+        responsavel = api.post(
+            "/api/responsaveis", json={"nome": "Ana Prado", "telefone": "31977776666"}
+        ).json()
+        return api.post(
+            "/api/alunos",
+            json={
+                "nome": nome or f"Aluno Teste {contador:03d}",
+                "responsavel_ids": [responsavel["id"]],
+            },
+        ).json()
+
+    return criar
+
+
+@pytest.fixture
+def matricula(api, novo_aluno) -> Callable[..., dict]:
+    """Matricula um aluno novo e devolve a matrícula."""
+
+    def criar(nome: str | None = None, **campos) -> dict:
+        dados = {
+            "aluno_id": novo_aluno(nome)["id"],
+            "data_inicio": "2026-01-15",
+            "valor_mensalidade": "150.00",
+        } | campos
+        resposta = api.post("/api/matriculas", json=dados)
+        assert resposta.status_code == 201, resposta.text
+        return resposta.json()
+
+    return criar

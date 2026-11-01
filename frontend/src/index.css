@@ -1759,3 +1759,42 @@ fieldset.gaveta-conteudo {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 }
+
+/* ===== Pagamento da mensalidade ===== */
+.segmentos-forma {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+}
+
+.segmentos-forma button {
+  padding-inline: 6px;
+}
+
+.rotulo-do-grupo {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tinta);
+}
+
+.aviso-valor {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--laranja-suave);
+  color: #8a4510;
+  font-size: 14px;
+}
+
+/* Linha da mensalidade que abre o pagamento (as outras ficam paradas) */
+.linha-parada.linha-aberta {
+  cursor: pointer;
+}
+
+.linha-parada.linha-aberta:hover {
+  background: var(--realce);
+}
+
+.primeira-maiuscula::first-letter {
+  text-transform: uppercase;
+}
