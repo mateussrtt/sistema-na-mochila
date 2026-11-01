@@ -117,6 +117,12 @@ export function nomeDoMes(mes: string): string {
   return `${MESES[Number(achado[2]) - 1]} de ${achado[1]}`
 }
 
+/** 2026-11 → Novembro de 2026 (com a primeira letra maiúscula, para títulos e listas) */
+export function nomeDoMesComMaiuscula(mes: string): string {
+  const nome = nomeDoMes(mes)
+  return nome.charAt(0).toUpperCase() + nome.slice(1)
+}
+
 /** Soma meses a um AAAA-MM: somarMeses('2026-12', 1) → '2027-01' */
 export function somarMeses(mes: string, quantos: number): string {
   const [ano, numero] = mes.split('-').map(Number)

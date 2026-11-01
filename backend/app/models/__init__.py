@@ -13,6 +13,7 @@ from app.models.mensalidade import (
     SituacaoMensalidade,
     StatusMensalidade,
     data_de_vencimento,
+    esta_atrasada,
     situacao_da_mensalidade,
 )
 from app.models.pagamento import FormaDePagamento, Pagamento
@@ -36,5 +37,6 @@ __all__ = [
     "Usuario",
     "aluno_responsavel",
     "data_de_vencimento",
+    "esta_atrasada",
     "situacao_da_mensalidade",
 ]

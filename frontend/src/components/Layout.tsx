@@ -8,6 +8,7 @@ import {
   ReceiptText,
   ShieldCheck,
   TrendingDown,
+  TriangleAlert,
   Users,
   X,
 } from 'lucide-react'
@@ -25,6 +26,7 @@ const menu = [
   { to: '/', rotulo: 'Início', Icone: House },
   { to: '/alunos', rotulo: 'Alunos', Icone: Users },
   { to: '/mensalidades', rotulo: 'Mensalidades', Icone: ReceiptText },
+  { to: '/pendencias', rotulo: 'Pendências', Icone: TriangleAlert },
   { to: '/despesas', rotulo: 'Despesas', Icone: TrendingDown },
   { to: '/receitas', rotulo: 'Receitas', Icone: HandCoins },
   { to: '/caixa', rotulo: 'Caixa', Icone: ChartNoAxesColumn },

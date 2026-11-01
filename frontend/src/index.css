@@ -1798,3 +1798,170 @@ fieldset.gaveta-conteudo {
 .primeira-maiuscula::first-letter {
   text-transform: uppercase;
 }
+
+/* ===== Painel de pendências ===== */
+.pendencias {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pendencia {
+  overflow: hidden;
+  border: 1px solid var(--linha);
+  border-radius: 16px;
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+}
+
+.pendencia-topo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.pendencia-quem {
+  min-width: 0;
+}
+
+.pendencia-rotulo {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+
+/* Os responsáveis do aluno, um abaixo do outro, cada um com o seu contato */
+.pendencia-responsaveis {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pendencia-responsaveis > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pendencia-responsaveis strong {
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pendencia-sem-responsavel {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tinta-suave);
+}
+
+.pendencia-contatos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--tinta-suave);
+}
+
+.pendencia-contatos a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.pendencia-contatos a:hover {
+  color: var(--marinho);
+  text-decoration: underline;
+}
+
+.pendencia-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 13px;
+  color: var(--tinta-suave);
+}
+
+.pendencia-total strong {
+  font-size: 17px;
+  color: var(--erro);
+}
+
+.pendencia-alunos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--linha);
+}
+
+.pendencia-aluno {
+  padding: 12px 18px;
+}
+
+.pendencia-aluno + .pendencia-aluno {
+  border-top: 1px solid var(--linha);
+}
+
+.pendencia-aluno-nome {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.pendencia-aluno-nome .etiqueta {
+  margin-left: 8px;
+}
+
+.pendencia-meses {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--tinta-suave);
+}
+
+.pendencia-meses li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+
+.pendencia-meses li > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 860px) {
+  .pendencia-topo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pendencia-total {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px dashed var(--linha);
+  }
+}

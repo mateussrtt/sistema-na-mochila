@@ -2,7 +2,17 @@ import enum
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Numeric, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    ColumnElement,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Numeric,
+    UniqueConstraint,
+    and_,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -91,3 +101,15 @@ class Mensalidade(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     matricula: Mapped[Matricula] = relationship()
+
+
+def esta_atrasada(hoje: date) -> ColumnElement[bool]:
+    """Condição de "atrasada" para usar nas consultas: pendente e vencida antes de hoje (RN07).
+
+    É a mesma regra de `situacao_da_mensalidade`, escrita para o banco. A lista de mensalidades e
+    o painel de pendências usam esta função, para nunca discordarem.
+    """
+    return and_(
+        Mensalidade.status == StatusMensalidade.PENDENTE,
+        Mensalidade.data_vencimento < hoje,
+    )
