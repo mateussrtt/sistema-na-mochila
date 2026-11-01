@@ -16,6 +16,7 @@ from app.models.mensalidade import (
     esta_atrasada,
     situacao_da_mensalidade,
 )
+from app.models.padrinho import Padrinho
 from app.models.pagamento import FormaDePagamento, Pagamento
 from app.models.responsavel import Responsavel
 from app.models.usuario import Perfil, Usuario
@@ -28,6 +29,7 @@ __all__ = [
     "FormaDePagamento",
     "Matricula",
     "Mensalidade",
+    "Padrinho",
     "Pagamento",
     "Perfil",
     "Responsavel",
