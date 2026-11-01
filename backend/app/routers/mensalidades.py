@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
 from app.core import tempo
-from app.core.acesso import LOGADO, PODE_EDITAR, UsuarioLogado
+from app.core.acesso import LOGADO, PODE_EDITAR, SO_ADMIN, UsuarioLogado
 from app.db.session import get_db
 from app.models import (
     Aluno,
@@ -30,13 +30,14 @@ from app.schemas.mensalidade import (
     GeracaoEntrada,
     GeracaoResultado,
     MensalidadeLeitura,
+    MotivoEntrada,
     PagamentoEntrada,
     PagamentoLeitura,
     primeiro_dia_do_mes,
 )
 
 # Todas as rotas exigem login. Gerar mensalidades e registrar pagamento exigem perfil de
-# operador ou administrador
+# operador ou administrador; isentar e cancelar, só administrador (RN13)
 router = APIRouter(prefix="/mensalidades", tags=["mensalidades"], dependencies=[LOGADO])
 
 Banco = Annotated[Session, Depends(get_db)]
@@ -99,6 +100,9 @@ def para_leitura(
         status=mensalidade.status,
         situacao=situacao,
         dias_em_atraso=atraso if situacao == SituacaoMensalidade.ATRASADA else 0,
+        motivo=mensalidade.motivo_alteracao,
+        alterado_por=mensalidade.alterado_por.nome if mensalidade.alterado_por else None,
+        alterado_em=mensalidade.alterado_em,
         pagamento=(
             PagamentoLeitura(
                 data_pagamento=pagamento.data_pagamento,
@@ -131,7 +135,10 @@ def listar(
         select(Mensalidade)
         .join(Mensalidade.matricula)
         .join(Matricula.aluno)
-        .options(contains_eager(Mensalidade.matricula).contains_eager(Matricula.aluno))
+        .options(
+            contains_eager(Mensalidade.matricula).contains_eager(Matricula.aluno),
+            joinedload(Mensalidade.alterado_por),
+        )
         .order_by(Aluno.nome, Mensalidade.competencia.desc(), Mensalidade.id)
     )
     primeiro_dia = mes_do_filtro(mes)
@@ -303,3 +310,76 @@ def registrar_pagamento(
     mensalidade.status = StatusMensalidade.PAGA
     db.commit()
     return para_leitura(mensalidade, tempo.hoje(), pagamento)
+
+
+MOTIVO_DE_NAO_ALTERAR = {
+    (
+        StatusMensalidade.ISENTA,
+        StatusMensalidade.PAGA,
+    ): "Uma mensalidade paga não pode ser isentada",
+    (StatusMensalidade.ISENTA, StatusMensalidade.ISENTA): "Esta mensalidade já está isenta",
+    (StatusMensalidade.ISENTA, StatusMensalidade.CANCELADA): (
+        "Uma mensalidade cancelada não pode ser isentada"
+    ),
+    (StatusMensalidade.CANCELADA, StatusMensalidade.PAGA): (
+        "Uma mensalidade paga não pode ser cancelada"
+    ),
+    (StatusMensalidade.CANCELADA, StatusMensalidade.ISENTA): (
+        "Uma mensalidade isenta não pode ser cancelada"
+    ),
+    (
+        StatusMensalidade.CANCELADA,
+        StatusMensalidade.CANCELADA,
+    ): "Esta mensalidade já está cancelada",
+}
+
+
+def alterar_situacao(
+    db: Session,
+    mensalidade_id: int,
+    novo_status: StatusMensalidade,
+    motivo: str,
+    usuario: UsuarioLogado,
+) -> MensalidadeLeitura:
+    """Isenta ou cancela uma mensalidade pendente, guardando motivo, autor e hora (RF14, RF26).
+
+    Só a mensalidade pendente muda: paga, isenta ou cancelada dá erro 409. Nada é apagado
+    (RN12): a mensalidade continua na lista, com a nova situação e o motivo.
+    """
+    # A linha fica travada até o fim: um pagamento e uma isenção simultâneos não passam juntos
+    mensalidade = db.scalar(
+        select(Mensalidade).where(Mensalidade.id == mensalidade_id).with_for_update()
+    )
+    if mensalidade is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Mensalidade não encontrada")
+    if mensalidade.status != StatusMensalidade.PENDENTE:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, MOTIVO_DE_NAO_ALTERAR[(novo_status, mensalidade.status)]
+        )
+
+    mensalidade.status = novo_status
+    mensalidade.motivo_alteracao = motivo
+    mensalidade.alterado_por_id = usuario.id
+    mensalidade.alterado_em = func.now()
+    db.commit()
+    return para_leitura(mensalidade, tempo.hoje())
+
+
+@router.patch(
+    "/{mensalidade_id}/isentar", response_model=MensalidadeLeitura, dependencies=[SO_ADMIN]
+)
+def isentar(
+    mensalidade_id: IdDaMensalidade, dados: MotivoEntrada, db: Banco, usuario: UsuarioLogado
+) -> MensalidadeLeitura:
+    """Isenta a mensalidade (por exemplo, no recesso): ela deixa de ser cobrada (RF14)."""
+    return alterar_situacao(db, mensalidade_id, StatusMensalidade.ISENTA, dados.motivo, usuario)
+
+
+@router.patch(
+    "/{mensalidade_id}/cancelar", response_model=MensalidadeLeitura, dependencies=[SO_ADMIN]
+)
+def cancelar(
+    mensalidade_id: IdDaMensalidade, dados: MotivoEntrada, db: Banco, usuario: UsuarioLogado
+) -> MensalidadeLeitura:
+    """Cancela a mensalidade gerada por engano: ela deixa de ser cobrada, mas fica no histórico."""
+    return alterar_situacao(db, mensalidade_id, StatusMensalidade.CANCELADA, dados.motivo, usuario)

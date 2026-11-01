@@ -15,6 +15,8 @@ _MES = re.compile(r"^([0-9]{4})-([0-9]{2})(?:-([0-9]{2}))?$")
 PRIMEIRO_MES_ACEITO = date(2000, 1, 1)
 MENSAGEM_DO_MES = "Informe o mês no formato AAAA-MM"
 OBSERVACAO_MAXIMA = 255
+MOTIVO_MINIMO = 3
+MOTIVO_MAXIMO = 255
 
 
 def primeiro_dia_do_mes(valor: object) -> date:
@@ -139,6 +141,29 @@ class PagamentoEntrada(BaseModel):
         return texto or None
 
 
+class MotivoEntrada(BaseModel):
+    """Motivo informado pelo administrador ao isentar ou cancelar uma mensalidade (RF14)."""
+
+    motivo: str
+
+    @field_validator("motivo", mode="before")
+    @classmethod
+    def exige_motivo(cls, valor: object) -> object:
+        if valor is None or (isinstance(valor, str) and not valor.strip()):
+            raise ValueError("Informe o motivo")
+        return valor
+
+    @field_validator("motivo")
+    @classmethod
+    def motivo_limpo(cls, valor: str) -> str:
+        texto = texto_valido(valor).strip()
+        if len(texto) < MOTIVO_MINIMO:
+            raise ValueError(f"Explique o motivo com pelo menos {MOTIVO_MINIMO} letras")
+        if len(texto) > MOTIVO_MAXIMO:
+            raise ValueError(f"Use no máximo {MOTIVO_MAXIMO} caracteres no motivo")
+        return " ".join(texto.split())
+
+
 class PagamentoLeitura(BaseModel):
     """O pagamento ativo de uma mensalidade, com quem registrou (RF26)."""
 
@@ -165,3 +190,7 @@ class MensalidadeLeitura(BaseModel):
     dias_em_atraso: int
     # Só a mensalidade paga tem pagamento
     pagamento: PagamentoLeitura | None = None
+    # Só a mensalidade isenta ou cancelada tem motivo, quem alterou e quando (RF14, RF26)
+    motivo: str | None = None
+    alterado_por: str | None = None
+    alterado_em: datetime | None = None

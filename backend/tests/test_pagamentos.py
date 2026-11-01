@@ -446,8 +446,11 @@ def test_um_pagamento_recusado_nao_altera_o_primeiro(api, mensalidade):
     ],
 )
 def test_isenta_e_cancelada_nao_recebem_pagamento(api, db, mensalidade, status, mensagem):
-    db.scalars(select(Mensalidade)).one().status = status
-    db.flush()
+    acao = "isentar" if status == StatusMensalidade.ISENTA else "cancelar"
+    alteracao = api.patch(
+        f"/api/mensalidades/{mensalidade['id']}/{acao}", json={"motivo": "Motivo de teste"}
+    )
+    assert alteracao.status_code == 200
 
     resposta = pagar(api, mensalidade["id"])
 
@@ -601,7 +604,10 @@ def test_pagamento_nao_pode_ser_lido_editado_nem_apagado_por_aqui(api, mensalida
 # ---------- Desempenho: a lista não faz uma consulta por linha ----------
 
 
-def contar_consultas(cliente) -> int:
+def contar_consultas(cliente, db) -> int:
+    # Esquece o que a sessão de teste já tem na memória: sem isso, um carregamento preguiçoso
+    # (uma consulta por linha) passaria despercebido, porque os usuários já estariam carregados
+    db.expire_all()
     total = 0
 
     def conta(*_):
@@ -616,21 +622,22 @@ def contar_consultas(cliente) -> int:
     return total
 
 
-def test_listar_pagamentos_nao_faz_uma_consulta_por_mensalidade(api, matricula):
+def test_listar_pagamentos_nao_faz_uma_consulta_por_mensalidade(api, api_como, db, matricula):
     for _ in range(2):
         matricula()
     api.post("/api/mensalidades/gerar", json={"competencia": "2026-11"})
     for m in api.get("/api/mensalidades").json():
-        pagar(api, m["id"])
-    com_2 = contar_consultas(api)
+        # Cada pagamento por um operador diferente: é o que faria uma consulta por linha
+        pagar(api_como(Perfil.OPERADOR), m["id"])
+    com_2 = contar_consultas(api, db)
 
     for _ in range(6):
         matricula()
     api.post("/api/mensalidades/gerar", json={"competencia": "2026-11"})
     for m in api.get("/api/mensalidades").json():
         if m["status"] == "pendente":
-            pagar(api, m["id"])
-    com_8 = contar_consultas(api)
+            pagar(api_como(Perfil.OPERADOR), m["id"])
+    com_8 = contar_consultas(api, db)
 
     assert len(api.get("/api/mensalidades").json()) == 8
     assert com_8 == com_2
