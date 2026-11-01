@@ -15,6 +15,7 @@ from app.models.mensalidade import (
     data_de_vencimento,
     situacao_da_mensalidade,
 )
+from app.models.pagamento import FormaDePagamento, Pagamento
 from app.models.responsavel import Responsavel
 from app.models.usuario import Perfil, Usuario
 
@@ -23,8 +24,10 @@ __all__ = [
     "Aluno",
     "Base",
     "Bolsa",
+    "FormaDePagamento",
     "Matricula",
     "Mensalidade",
+    "Pagamento",
     "Perfil",
     "Responsavel",
     "SituacaoMatricula",

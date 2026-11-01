@@ -28,45 +28,6 @@ def hoje_fixo(monkeypatch):
     monkeypatch.setattr(tempo, "hoje", lambda: HOJE)
 
 
-@pytest.fixture
-def novo_aluno(api):
-    """Cria um aluno com responsável. Cada chamada cria um aluno diferente."""
-    contador = 0
-
-    def criar(nome: str | None = None) -> dict:
-        nonlocal contador
-        contador += 1
-        responsavel = api.post(
-            "/api/responsaveis", json={"nome": "Ana Prado", "telefone": "31977776666"}
-        ).json()
-        return api.post(
-            "/api/alunos",
-            json={
-                "nome": nome or f"Aluno Teste {contador:03d}",
-                "responsavel_ids": [responsavel["id"]],
-            },
-        ).json()
-
-    return criar
-
-
-@pytest.fixture
-def matricula(api, novo_aluno):
-    """Matricula um aluno novo e devolve a matrícula."""
-
-    def criar(nome: str | None = None, **campos) -> dict:
-        dados = {
-            "aluno_id": novo_aluno(nome)["id"],
-            "data_inicio": "2026-01-15",
-            "valor_mensalidade": "150.00",
-        } | campos
-        resposta = api.post("/api/matriculas", json=dados)
-        assert resposta.status_code == 201, resposta.text
-        return resposta.json()
-
-    return criar
-
-
 def gerar(cliente, competencia="2026-11"):
     return cliente.post("/api/mensalidades/gerar", json={"competencia": competencia})
 
@@ -687,7 +648,9 @@ def test_resposta_traz_so_o_necessario(api, matricula):
         "status",
         "situacao",
         "dias_em_atraso",
+        "pagamento",
     }
+    assert mensalidade["pagamento"] is None  # só a mensalidade paga tem pagamento
     assert set(mensalidade["aluno"]) == {"id", "nome", "ativo"}
     assert "31977776666" not in api.get("/api/mensalidades").text  # telefone do responsável
 

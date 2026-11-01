@@ -2,11 +2,11 @@ import calendar
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy import Row, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Session, contains_eager
+from sqlalchemy.orm import Session, contains_eager, joinedload
 
 from app.core import tempo
 from app.core.acesso import LOGADO, PODE_EDITAR, UsuarioLogado
@@ -16,6 +16,7 @@ from app.models import (
     Bolsa,
     Matricula,
     Mensalidade,
+    Pagamento,
     SituacaoMatricula,
     SituacaoMensalidade,
     StatusMensalidade,
@@ -28,13 +29,17 @@ from app.schemas.mensalidade import (
     GeracaoEntrada,
     GeracaoResultado,
     MensalidadeLeitura,
+    PagamentoEntrada,
+    PagamentoLeitura,
     primeiro_dia_do_mes,
 )
 
-# Todas as rotas exigem login. Gerar mensalidades exige perfil de operador ou administrador
+# Todas as rotas exigem login. Gerar mensalidades e registrar pagamento exigem perfil de
+# operador ou administrador
 router = APIRouter(prefix="/mensalidades", tags=["mensalidades"], dependencies=[LOGADO])
 
 Banco = Annotated[Session, Depends(get_db)]
+IdDaMensalidade = Annotated[int, Path(gt=0, le=ID_MAXIMO)]
 
 SituacaoDoFiltro = Literal["todas", "a_vencer", "atrasada", "paga", "isenta", "cancelada"]
 
@@ -63,7 +68,22 @@ def alunos_ja_cobrados(db: Session, competencia: date) -> set[int]:
     )
 
 
-def para_leitura(mensalidade: Mensalidade, hoje: date) -> MensalidadeLeitura:
+def pagamentos_ativos(db: Session, mensalidades: list[Mensalidade]) -> dict[int, Pagamento]:
+    """O pagamento ativo de cada mensalidade da lista, numa consulta só (sem uma por linha)."""
+    ids = [m.id for m in mensalidades if m.status == StatusMensalidade.PAGA]
+    if not ids:
+        return {}
+    pagamentos = db.scalars(
+        select(Pagamento)
+        .where(Pagamento.mensalidade_id.in_(ids), Pagamento.cancelado_em.is_(None))
+        .options(joinedload(Pagamento.criado_por))
+    )
+    return {p.mensalidade_id: p for p in pagamentos}
+
+
+def para_leitura(
+    mensalidade: Mensalidade, hoje: date, pagamento: Pagamento | None = None
+) -> MensalidadeLeitura:
     situacao = situacao_da_mensalidade(mensalidade.status, mensalidade.data_vencimento, hoje)
     atraso = (hoje - mensalidade.data_vencimento).days
     matricula = mensalidade.matricula
@@ -78,6 +98,18 @@ def para_leitura(mensalidade: Mensalidade, hoje: date) -> MensalidadeLeitura:
         status=mensalidade.status,
         situacao=situacao,
         dias_em_atraso=atraso if situacao == SituacaoMensalidade.ATRASADA else 0,
+        pagamento=(
+            PagamentoLeitura(
+                data_pagamento=pagamento.data_pagamento,
+                valor_pago=pagamento.valor_pago,
+                forma_pagamento=pagamento.forma_pagamento,
+                observacao=pagamento.observacao,
+                registrado_por=pagamento.criado_por.nome,
+                registrado_em=pagamento.criado_em,
+            )
+            if pagamento
+            else None
+        ),
     )
 
 
@@ -119,7 +151,9 @@ def listar(
     if termo:
         # autoescape: "%" e "_" digitados na busca valem como texto, não como curinga do SQL
         consulta = consulta.where(Aluno.nome.icontains(termo, autoescape=True))
-    return [para_leitura(m, hoje) for m in db.scalars(consulta)]
+    mensalidades = list(db.scalars(consulta))
+    pagamentos = pagamentos_ativos(db, mensalidades)
+    return [para_leitura(m, hoje, pagamentos.get(m.id)) for m in mensalidades]
 
 
 @router.post("/gerar", response_model=GeracaoResultado, dependencies=[PODE_EDITAR])
@@ -204,3 +238,67 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
         bolsa_integral=len(com_bolsa_integral),
         ainda_nao_comecaram=ainda_nao_comecaram or 0,
     )
+
+
+MOTIVO_DE_NAO_RECEBER = {
+    StatusMensalidade.PAGA: "Esta mensalidade já foi paga",
+    StatusMensalidade.ISENTA: "Uma mensalidade isenta não recebe pagamento",
+    StatusMensalidade.CANCELADA: "Uma mensalidade cancelada não recebe pagamento",
+}
+
+
+@router.post(
+    "/{mensalidade_id}/pagamento",
+    response_model=MensalidadeLeitura,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[PODE_EDITAR],
+)
+def registrar_pagamento(
+    mensalidade_id: IdDaMensalidade,
+    dados: PagamentoEntrada,
+    db: Banco,
+    usuario: UsuarioLogado,
+) -> MensalidadeLeitura:
+    """Registra o pagamento de uma mensalidade pendente e a marca como paga (RF10).
+
+    - Só a mensalidade pendente recebe pagamento; paga, isenta ou cancelada dá erro 409.
+    - Se o valor pago for diferente do valor da mensalidade, a observação é obrigatória
+      (a tela pede a confirmação).
+    - Guarda quem registrou e quando (RF26).
+    """
+    # A linha fica travada até o fim: dois pagamentos simultâneos não passam juntos
+    mensalidade = db.scalar(
+        select(Mensalidade).where(Mensalidade.id == mensalidade_id).with_for_update()
+    )
+    if mensalidade is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Mensalidade não encontrada")
+    if mensalidade.status != StatusMensalidade.PENDENTE:
+        raise HTTPException(status.HTTP_409_CONFLICT, MOTIVO_DE_NAO_RECEBER[mensalidade.status])
+    if dados.valor_pago != mensalidade.valor and dados.observacao is None:
+        previsto = str(mensalidade.valor).replace(".", ",")
+        raise RequestValidationError(
+            [
+                {
+                    "type": "value_error",
+                    "loc": ("body", "observacao"),
+                    "msg": (
+                        f"O valor é diferente do previsto (R$ {previsto}). "
+                        "Explique o motivo na observação"
+                    ),
+                    "input": None,
+                }
+            ]
+        )
+
+    pagamento = Pagamento(
+        mensalidade_id=mensalidade.id,
+        data_pagamento=dados.data_pagamento,
+        valor_pago=dados.valor_pago,
+        forma_pagamento=dados.forma_pagamento,
+        observacao=dados.observacao,
+        criado_por_id=usuario.id,
+    )
+    db.add(pagamento)
+    mensalidade.status = StatusMensalidade.PAGA
+    db.commit()
+    return para_leitura(mensalidade, tempo.hoje(), pagamento)
