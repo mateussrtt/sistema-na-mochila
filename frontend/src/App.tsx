@@ -8,6 +8,7 @@ import ListaResponsaveis from './pages/cadastros/ListaResponsaveis'
 import EmConstrucao from './pages/EmConstrucao'
 import Entrar from './pages/Entrar'
 import Inicio from './pages/Inicio'
+import Mensalidades from './pages/mensalidades/Mensalidades'
 import NaoEncontrada from './pages/NaoEncontrada'
 import Usuarios from './pages/usuarios/Usuarios'
 import RotaProtegida from './sessao/RotaProtegida'
@@ -24,7 +25,7 @@ export default function App() {
             <Route path="responsaveis" element={<ListaResponsaveis />} />
             <Route path="matriculas" element={<ListaMatriculas />} />
           </Route>
-          <Route path="mensalidades" element={<EmConstrucao titulo="Mensalidades" />} />
+          <Route path="mensalidades" element={<Mensalidades />} />
           <Route path="despesas" element={<EmConstrucao titulo="Despesas" />} />
           <Route path="receitas" element={<EmConstrucao titulo="Receitas e patrocínios" />} />
           <Route path="caixa" element={<EmConstrucao titulo="Saldo e fluxo de caixa" />} />
