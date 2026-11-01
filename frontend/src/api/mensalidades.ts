@@ -67,6 +67,10 @@ export type ResultadoDaGeracao = {
   bolsa_integral: number
   /** Apadrinhados: quem cobra é a empresa, não o responsável */
   apadrinhados: number
+  /** Quantos apadrinhados entraram agora na cobrança da empresa */
+  apadrinhados_incluidos: number
+  /** Quantas cobranças de empresa nasceram nesta geração */
+  cobrancas_criadas: number
   ainda_nao_comecaram: number
 }
 

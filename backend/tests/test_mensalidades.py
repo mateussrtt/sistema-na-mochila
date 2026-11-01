@@ -53,6 +53,8 @@ def test_gera_uma_mensalidade_por_matricula_ativa(api, matricula):
         "ja_existiam": 0,
         "bolsa_integral": 0,
         "apadrinhados": 0,
+        "apadrinhados_incluidos": 0,
+        "cobrancas_criadas": 0,
         "ainda_nao_comecaram": 0,
     }
     mensalidades = {m["matricula_id"]: m for m in listar(api, mes="2026-11")}

@@ -63,7 +63,8 @@ def listar(
         # "outer": um aluno sem responsável (não deveria existir, RN01) não pode sumir da lista
         .outerjoin(aluno_responsavel, aluno_responsavel.c.aluno_id == Aluno.id)
         .outerjoin(Responsavel, Responsavel.id == aluno_responsavel.c.responsavel_id)
-        .where(esta_atrasada(hoje))
+        # A cobrança da empresa tem a tela dela: aluno apadrinhado não deve ao responsável
+        .where(esta_atrasada(hoje), Mensalidade.cobranca_id.is_(None))
     )
     primeiro_dia = mes_do_filtro(mes)
     if primeiro_dia is not None:

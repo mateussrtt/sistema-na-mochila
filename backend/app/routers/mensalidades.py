@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, contains_eager, joinedload
 
 from app.core import tempo
 from app.core.acesso import LOGADO, PODE_EDITAR, SO_ADMIN, UsuarioLogado
+from app.core.apadrinhamento import Apadrinhado, incluir_apadrinhados
 from app.db.session import get_db
 from app.models import (
     Aluno,
@@ -128,7 +129,9 @@ def listar(
 ) -> list[MensalidadeLeitura]:
     """Lista as mensalidades, por aluno e depois do mês mais recente para o mais antigo.
 
-    `mes` usa o formato AAAA-MM. A busca procura o texto no nome do aluno.
+    `mes` usa o formato AAAA-MM. A busca procura o texto no nome do aluno. Só aparecem as
+    mensalidades cobradas dos responsáveis: as dos alunos apadrinhados ficam na cobrança da
+    empresa (`/cobrancas`).
     """
     hoje = tempo.hoje()
     consulta = (
@@ -139,6 +142,7 @@ def listar(
             contains_eager(Mensalidade.matricula).contains_eager(Matricula.aluno),
             joinedload(Mensalidade.alterado_por),
         )
+        .where(Mensalidade.cobranca_id.is_(None))
         .order_by(Aluno.nome, Mensalidade.competencia.desc(), Mensalidade.id)
     )
     primeiro_dia = mes_do_filtro(mes)
@@ -173,6 +177,8 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
     mês é cobrado nesse mês, e um mês passado pode ser gerado depois.
 
     - Bolsa integral (não paga) e matrícula que só começa depois do mês ficam de fora.
+    - Aluno apadrinhado não é cobrado do responsável: a mensalidade dele entra na cobrança da
+      empresa, que é criada se ainda não existir (RN16, RN18).
     - Se o aluno teve duas matrículas no mesmo mês (saiu e voltou), vale a mais recente: ele
       não é cobrado em dobro.
     - O vencimento é no dia 10, ou na data de início para quem entrou depois do dia 10.
@@ -188,6 +194,7 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
             Matricula.valor_mensalidade,
             Matricula.bolsa,
             Matricula.data_inicio,
+            Matricula.padrinho_id,
         )
         .where(
             Matricula.data_inicio <= ultimo,
@@ -218,6 +225,11 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
 
     ja_cobrados = alunos_ja_cobrados(db, primeiro)
     a_gerar = [m for m in a_cobrar if m.aluno_id not in ja_cobrados]
+    apadrinhados_a_incluir = [
+        Apadrinhado(m.id, m.padrinho_id, m.valor_mensalidade)
+        for m in apadrinhados
+        if m.aluno_id not in ja_cobrados
+    ]
 
     geradas = 0
     if a_gerar:
@@ -241,6 +253,9 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
             .returning(Mensalidade.id)
         ).all()
         geradas = len(inseridas)
+    incluidos, cobrancas_criadas = incluir_apadrinhados(
+        db, apadrinhados_a_incluir, primeiro, usuario.id
+    )
     db.commit()
 
     return GeracaoResultado(
@@ -249,9 +264,16 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
         ja_existiam=len(a_cobrar) - geradas,
         bolsa_integral=len(com_bolsa_integral),
         apadrinhados=len(apadrinhados),
+        apadrinhados_incluidos=incluidos,
+        cobrancas_criadas=cobrancas_criadas,
         ainda_nao_comecaram=ainda_nao_comecaram or 0,
     )
 
+
+FAZ_PARTE_DE_COBRANCA = (
+    "Esta mensalidade é de um aluno apadrinhado: ela faz parte da cobrança da empresa, "
+    "que é paga ou cancelada na tela de cobranças"
+)
 
 MOTIVO_DE_NAO_RECEBER = {
     StatusMensalidade.PAGA: "Esta mensalidade já foi paga",
@@ -285,6 +307,8 @@ def registrar_pagamento(
     )
     if mensalidade is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Mensalidade não encontrada")
+    if mensalidade.cobranca_id is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, FAZ_PARTE_DE_COBRANCA)
     if mensalidade.status != StatusMensalidade.PENDENTE:
         raise HTTPException(status.HTTP_409_CONFLICT, MOTIVO_DE_NAO_RECEBER[mensalidade.status])
     if dados.valor_pago != mensalidade.valor and dados.observacao is None:
@@ -357,6 +381,8 @@ def alterar_situacao(
     )
     if mensalidade is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Mensalidade não encontrada")
+    if mensalidade.cobranca_id is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, FAZ_PARTE_DE_COBRANCA)
     if mensalidade.status != StatusMensalidade.PENDENTE:
         raise HTTPException(
             status.HTTP_409_CONFLICT, MOTIVO_DE_NAO_ALTERAR[(novo_status, mensalidade.status)]

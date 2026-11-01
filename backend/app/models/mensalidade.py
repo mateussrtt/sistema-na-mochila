@@ -113,6 +113,9 @@ class Mensalidade(Base):
     alterado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
     alterado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Preenchido quando o aluno é apadrinhado: a mensalidade é paga pela cobrança da empresa (RN16)
+    cobranca_id: Mapped[int | None] = mapped_column(ForeignKey("cobrancas.id"), index=True)
+
     matricula: Mapped[Matricula] = relationship()
     alterado_por: Mapped[Usuario | None] = relationship(foreign_keys=[alterado_por_id])
 
