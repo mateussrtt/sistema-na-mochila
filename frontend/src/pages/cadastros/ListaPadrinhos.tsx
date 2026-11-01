@@ -1,4 +1,4 @@
-import { Building2, ChevronRight, Phone, Plus, UserRound } from 'lucide-react'
+import { Building2, ChevronRight, GraduationCap, Phone, Plus, UserRound } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import type { Situacao } from '../../api/cadastros'
@@ -154,6 +154,12 @@ export default function ListaPadrinhos() {
                         <Phone size={14} aria-hidden="true" />
                         {mascaraTelefone(padrinho.telefone)}
                       </span>
+                      {padrinho.alunos_apadrinhados > 0 && (
+                        <span>
+                          <GraduationCap size={14} aria-hidden="true" />
+                          {plural(padrinho.alunos_apadrinhados, 'aluno apadrinhado', 'alunos apadrinhados')}
+                        </span>
+                      )}
                     </span>
                   </span>
                   <span className="linha-lateral">

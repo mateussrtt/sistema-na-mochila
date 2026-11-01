@@ -18,6 +18,8 @@ export type Padrinho = {
   /** Dia até o qual a nota deve ser emitida, se houver */
   emitir_ate_dia: number | null
   ativo: boolean
+  /** Alunos com matrícula ativa apadrinhados por esta empresa */
+  alunos_apadrinhados: number
 }
 
 export type PadrinhoEntrada = {

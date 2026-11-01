@@ -65,6 +65,8 @@ export type ResultadoDaGeracao = {
   geradas: number
   ja_existiam: number
   bolsa_integral: number
+  /** Apadrinhados: quem cobra é a empresa, não o responsável */
+  apadrinhados: number
   ainda_nao_comecaram: number
 }
 

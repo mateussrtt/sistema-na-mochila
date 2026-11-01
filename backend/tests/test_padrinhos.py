@@ -66,6 +66,7 @@ def test_cadastra_so_com_os_campos_obrigatorios(api, db):
         "dia_vencimento": 25,
         "emitir_ate_dia": None,
         "ativo": True,
+        "alunos_apadrinhados": 0,
     }
     assert len(no_banco(db)) == 1
 
@@ -93,6 +94,7 @@ def test_cadastra_com_todos_os_dados(api):
         "dia_vencimento": 25,
         "emitir_ate_dia": 10,
         "ativo": True,
+        "alunos_apadrinhados": 0,
     }
 
 
@@ -665,6 +667,7 @@ def test_edita_todos_os_campos(api):
         "dia_vencimento": 5,
         "emitir_ate_dia": 3,
         "ativo": True,
+        "alunos_apadrinhados": 0,
     }
     assert api.get(f"/api/padrinhos/{criado['id']}").json() == resposta.json()
 
@@ -837,6 +840,7 @@ def test_resposta_traz_so_os_campos_previstos(api):
         "dia_vencimento",
         "emitir_ate_dia",
         "ativo",
+        "alunos_apadrinhados",
     }
     assert "criado_em" not in padrinho
     assert "atualizado_em" not in padrinho

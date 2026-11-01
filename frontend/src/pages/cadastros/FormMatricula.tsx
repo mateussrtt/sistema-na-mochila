@@ -3,20 +3,22 @@ import { useState, type FormEvent } from 'react'
 
 import { matricularAluno, NOME_DA_BOLSA, type Aluno, type Bolsa } from '../../api/cadastros'
 import { ApiError } from '../../api/client'
+import type { Padrinho } from '../../api/padrinhos'
 import Campo from '../../components/Campo'
 import Monograma from '../../components/Monograma'
 import { ligacaoDoCampo } from '../../utils/campo'
 import { hojeIso, lerValor } from '../../utils/formato'
 import SeletorAluno from './SeletorAluno'
+import SeletorPadrinho from './SeletorPadrinho'
 
 type Props = {
   aoSalvar: (mensagem: string) => void
   aoCancelar: () => void
 }
 
-type Erros = Partial<Record<'aluno' | 'data_inicio' | 'valor' | 'geral', string>>
+type Erros = Partial<Record<'aluno' | 'padrinho' | 'data_inicio' | 'valor' | 'geral', string>>
 
-const BOLSAS: Bolsa[] = ['nenhuma', 'parcial', 'integral']
+const BOLSAS: Bolsa[] = ['nenhuma', 'parcial', 'integral', 'apadrinhada']
 
 function erroDoValor(texto: string): string | undefined {
   const limpo = texto.trim()
@@ -33,6 +35,8 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
   const [valor, setValor] = useState('')
   const [bolsa, setBolsa] = useState<Bolsa>('nenhuma')
   const integral = bolsa === 'integral'
+  const apadrinhada = bolsa === 'apadrinhada'
+  const [padrinho, setPadrinho] = useState<Padrinho | null>(null)
   const [tentou, setTentou] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erroApi, setErroApi] = useState<Erros>({})
@@ -40,6 +44,7 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
   function validar(): Erros {
     const erros: Erros = {}
     if (!aluno) erros.aluno = 'Escolha o aluno que será matriculado.'
+    if (apadrinhada && !padrinho) erros.padrinho = 'Escolha a empresa que apadrinha o aluno.'
     if (!inicio) erros.data_inicio = 'Informe a data de início.'
     const erroValor = integral ? undefined : erroDoValor(valor)
     if (erroValor) erros.valor = erroValor
@@ -61,13 +66,21 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
         data_inicio: inicio,
         bolsa,
         valor_mensalidade: integral ? '0' : valor.trim().replace(',', '.'),
+        padrinho_id: apadrinhada ? (padrinho?.id ?? null) : null,
       })
-      aoSalvar(integral ? 'Matrícula com bolsa integral registrada' : 'Matrícula registrada')
+      aoSalvar(
+        integral
+          ? 'Matrícula com bolsa integral registrada'
+          : apadrinhada
+            ? `Matrícula apadrinhada por ${padrinho?.nome ?? 'a empresa'} registrada`
+            : 'Matrícula registrada',
+      )
     } catch (erro) {
       const campos = erro instanceof ApiError ? erro.campos : {}
       const doServidor: Erros = {}
       if (campos.data_inicio) doServidor.data_inicio = campos.data_inicio
       if (campos.valor_mensalidade) doServidor.valor = campos.valor_mensalidade
+      if (campos.padrinho_id) doServidor.padrinho = campos.padrinho_id
       if (Object.keys(doServidor).length === 0) {
         doServidor.geral =
           erro instanceof ApiError ? erro.message : 'Não foi possível salvar. Tente de novo.'
@@ -115,7 +128,7 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
 
         <fieldset className="grupo">
           <legend>Bolsa</legend>
-          <div className="segmentos segmentos-largos" role="group" aria-label="Bolsa">
+          <div className="segmentos segmentos-quatro" role="group" aria-label="Bolsa">
             {BOLSAS.map((b) => (
               <button key={b} type="button" aria-pressed={bolsa === b} onClick={() => setBolsa(b)}>
                 {NOME_DA_BOLSA[b]}
@@ -126,8 +139,44 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
             {bolsa === 'nenhuma' && 'O aluno paga o valor cheio da mensalidade.'}
             {bolsa === 'parcial' && 'Informe abaixo o valor que a família paga, já com o desconto.'}
             {integral && 'Bolsista integral não paga mensalidade e não entra nas cobranças.'}
+            {apadrinhada &&
+              'Uma empresa paga 100% da mensalidade. O responsável não é cobrado: a cobrança vai para a empresa.'}
           </p>
         </fieldset>
+
+        {apadrinhada && (
+          <fieldset className={`grupo${erros.padrinho ? ' com-erro' : ''}`}>
+            <legend>Empresa padrinha</legend>
+            {padrinho ? (
+              <ul className="vinculados">
+                <li>
+                  <Monograma nome={padrinho.nome} tamanho="p" />
+                  <span className="pessoa-texto">
+                    <strong>{padrinho.nome}</strong>
+                    <span>Vencimento combinado no dia {padrinho.dia_vencimento}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="botao-icone"
+                    aria-label={`Trocar ${padrinho.nome}`}
+                    onClick={() => setPadrinho(null)}
+                  >
+                    <X size={18} />
+                  </button>
+                </li>
+              </ul>
+            ) : (
+              <>
+                <SeletorPadrinho aoEscolher={setPadrinho} invalido={Boolean(erros.padrinho)} />
+                {erros.padrinho && (
+                  <p className="campo-erro" id="padrinho-erro" role="alert">
+                    {erros.padrinho}
+                  </p>
+                )}
+              </>
+            )}
+          </fieldset>
+        )}
 
         <div className="campos-lado-a-lado">
           <Campo id="matricula-inicio" rotulo="Data de início" erro={erros.data_inicio}>
@@ -140,7 +189,13 @@ export default function FormMatricula({ aoSalvar, aoCancelar }: Props) {
           </Campo>
           <Campo
             id="matricula-valor"
-            rotulo={bolsa === 'parcial' ? 'Valor com desconto (R$)' : 'Valor da mensalidade (R$)'}
+            rotulo={
+              bolsa === 'parcial'
+                ? 'Valor com desconto (R$)'
+                : apadrinhada
+                  ? 'Valor pago pela empresa (R$)'
+                  : 'Valor da mensalidade (R$)'
+            }
             erro={erros.valor}
           >
             <input

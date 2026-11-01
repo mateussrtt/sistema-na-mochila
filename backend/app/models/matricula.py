@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.aluno import Aluno
+from app.models.padrinho import Padrinho
 
 
 class SituacaoMatricula(enum.StrEnum):
@@ -15,11 +16,16 @@ class SituacaoMatricula(enum.StrEnum):
 
 
 class Bolsa(enum.StrEnum):
-    """Bolsa concedida pela associação. Com bolsa integral, o aluno não paga mensalidade."""
+    """Bolsa concedida pela associação. Com bolsa integral, o aluno não paga mensalidade.
+
+    Com bolsa apadrinhada, uma empresa (o padrinho) paga 100% da mensalidade: o valor continua
+    na matrícula, mas quem cobra é a cobrança da empresa, não o responsável (RN16, RN17).
+    """
 
     NENHUMA = "nenhuma"
     PARCIAL = "parcial"
     INTEGRAL = "integral"
+    APADRINHADA = "apadrinhada"
 
 
 class Matricula(Base):
@@ -38,6 +44,10 @@ class Matricula(Base):
             " OR (bolsa <> 'integral' AND valor_mensalidade > 0)",
             name="valor_conforme_bolsa",
         ),
+        # Só a matrícula apadrinhada tem padrinho, e toda matrícula apadrinhada tem um
+        CheckConstraint(
+            "(bolsa = 'apadrinhada') = (padrinho_id IS NOT NULL)", name="padrinho_conforme_bolsa"
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -52,13 +62,15 @@ class Matricula(Base):
             Bolsa,
             name="bolsa",
             native_enum=False,
-            length=10,
+            length=15,
             create_constraint=True,
             values_callable=lambda bolsas: [b.value for b in bolsas],
         ),
         default=Bolsa.NENHUMA,
         server_default=Bolsa.NENHUMA.value,
     )
+    # A empresa que paga a mensalidade. Preenchido só na bolsa apadrinhada
+    padrinho_id: Mapped[int | None] = mapped_column(ForeignKey("padrinhos.id"), index=True)
     situacao: Mapped[SituacaoMatricula] = mapped_column(
         Enum(
             SituacaoMatricula,
@@ -77,3 +89,4 @@ class Matricula(Base):
     )
 
     aluno: Mapped[Aluno] = relationship()
+    padrinho: Mapped[Padrinho | None] = relationship()

@@ -61,13 +61,24 @@ export type AlunoResumo = {
   ativo: boolean
 }
 
-/** Com bolsa integral o aluno não paga; com bolsa parcial paga um valor menor */
-export type Bolsa = 'nenhuma' | 'parcial' | 'integral'
+/**
+ * Com bolsa integral o aluno não paga; com bolsa parcial paga um valor menor; apadrinhada: uma
+ * empresa paga 100% da mensalidade (o valor continua na matrícula, mas o responsável não é cobrado)
+ */
+export type Bolsa = 'nenhuma' | 'parcial' | 'integral' | 'apadrinhada'
 
 export const NOME_DA_BOLSA: Record<Bolsa, string> = {
   nenhuma: 'Sem bolsa',
   parcial: 'Bolsa parcial',
   integral: 'Bolsa integral',
+  apadrinhada: 'Apadrinhada',
+}
+
+/** A empresa que apadrinha, como aparece junto da matrícula */
+export type PadrinhoResumo = {
+  id: number
+  nome: string
+  ativo: boolean
 }
 
 export type Matricula = {
@@ -78,6 +89,8 @@ export type Matricula = {
   /** Vem como texto ("150.00") para não perder as casas decimais */
   valor_mensalidade: string
   bolsa: Bolsa
+  /** Só a matrícula apadrinhada tem empresa */
+  padrinho: PadrinhoResumo | null
   situacao: 'ativa' | 'encerrada'
 }
 
@@ -86,6 +99,8 @@ export type MatriculaEntrada = {
   data_inicio: string
   bolsa: Bolsa
   valor_mensalidade: string
+  /** Obrigatório na bolsa apadrinhada; null nas outras */
+  padrinho_id: number | null
 }
 
 export type SituacaoMatricula = 'ativas' | 'encerradas' | 'todas'
@@ -95,8 +110,10 @@ export function listarMatriculas(
   situacao: SituacaoMatricula,
   soBolsistas: boolean,
   signal?: AbortSignal,
+  padrinhoId?: number | null,
 ) {
   const parametros = new URLSearchParams({ busca, situacao, so_bolsistas: String(soBolsistas) })
+  if (padrinhoId) parametros.set('padrinho_id', String(padrinhoId))
   return apiGet<Matricula[]>(`/api/matriculas?${parametros}`, signal)
 }
 

@@ -1,13 +1,13 @@
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
 from app.core.acesso import LOGADO, PODE_EDITAR
 from app.db.session import get_db
-from app.models import Aluno, Bolsa, Matricula, SituacaoMatricula
+from app.models import Aluno, Bolsa, Matricula, Padrinho, SituacaoMatricula
 from app.schemas.matricula import (
     ID_MAXIMO,
     MatriculaEncerramento,
@@ -39,7 +39,7 @@ def busca_matricula(db: Session, matricula_id: int, bloquear: bool = False) -> M
     consulta = (
         select(Matricula)
         .where(Matricula.id == matricula_id)
-        .options(joinedload(Matricula.aluno, innerjoin=True))
+        .options(joinedload(Matricula.aluno, innerjoin=True), joinedload(Matricula.padrinho))
     )
     if bloquear:
         # Trava a linha até o commit: dois encerramentos ao mesmo tempo não passam juntos
@@ -50,6 +50,27 @@ def busca_matricula(db: Session, matricula_id: int, bloquear: bool = False) -> M
     return matricula
 
 
+def busca_padrinho_ativo(db: Session, padrinho_id: int | None) -> Padrinho | None:
+    """Confere a empresa que vai apadrinhar. Sem empresa (outras bolsas), não há o que conferir.
+
+    A linha fica travada para leitura até o fim: inativar o padrinho ao mesmo tempo espera, e
+    assim nunca nasce uma matrícula apadrinhada por uma empresa já inativa.
+    """
+    if padrinho_id is None:
+        return None
+    padrinho = db.scalar(
+        select(Padrinho).where(Padrinho.id == padrinho_id).with_for_update(read=True)
+    )
+    if padrinho is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Padrinho não encontrado")
+    if not padrinho.ativo:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Padrinho inativo não pode apadrinhar. Reative o padrinho antes.",
+        )
+    return padrinho
+
+
 @router.get("", response_model=list[MatriculaLeitura])
 def listar(
     db: Banco,
@@ -57,15 +78,18 @@ def listar(
     situacao: Literal["ativas", "encerradas", "todas"] = "ativas",
     aluno_id: Annotated[int | None, Query(gt=0, le=ID_MAXIMO)] = None,
     so_bolsistas: bool = False,
+    padrinho_id: Annotated[int | None, Query(gt=0, le=ID_MAXIMO)] = None,
 ) -> list[Matricula]:
     """Lista as matrículas em ordem alfabética pelo nome do aluno.
 
-    A busca procura o texto no nome do aluno.
+    A busca procura o texto no nome do aluno e no da empresa que o apadrinha. O filtro
+    `padrinho_id` mostra só as matrículas apadrinhadas por aquela empresa.
     """
     consulta = (
         select(Matricula)
         .join(Matricula.aluno)
-        .options(contains_eager(Matricula.aluno))
+        .outerjoin(Matricula.padrinho)
+        .options(contains_eager(Matricula.aluno), contains_eager(Matricula.padrinho))
         .order_by(Aluno.nome, Matricula.data_inicio.desc())
     )
     if situacao != "todas":
@@ -75,11 +99,18 @@ def listar(
         consulta = consulta.where(Matricula.aluno_id == aluno_id)
     if so_bolsistas:
         consulta = consulta.where(Matricula.bolsa != Bolsa.NENHUMA)
+    if padrinho_id is not None:
+        consulta = consulta.where(Matricula.padrinho_id == padrinho_id)
     # O PostgreSQL não aceita o caractere nulo (\x00) em texto; ele é descartado
     termo = busca.replace("\x00", "").strip() if busca else ""
     if termo:
         # autoescape: "%" e "_" digitados na busca valem como texto, não como curinga do SQL
-        consulta = consulta.where(Aluno.nome.icontains(termo, autoescape=True))
+        consulta = consulta.where(
+            or_(
+                Aluno.nome.icontains(termo, autoescape=True),
+                Padrinho.nome.icontains(termo, autoescape=True),
+            )
+        )
     return list(db.scalars(consulta))
 
 
@@ -101,8 +132,11 @@ def matricular(dados: MatriculaEntrada, db: Banco) -> Matricula:
     if tem_matricula_ativa(db, aluno.id):
         raise HTTPException(status.HTTP_409_CONFLICT, JA_MATRICULADO)
 
+    padrinho = busca_padrinho_ativo(db, dados.padrinho_id)
+
     matricula = Matricula(
         aluno=aluno,
+        padrinho=padrinho,
         data_inicio=dados.data_inicio,
         valor_mensalidade=dados.valor_mensalidade,
         bolsa=dados.bolsa,

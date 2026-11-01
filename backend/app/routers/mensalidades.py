@@ -200,14 +200,18 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
     for matricula in em_vigor:
         vale_no_mes.setdefault(matricula.aluno_id, matricula)
     com_bolsa_integral = [m for m in vale_no_mes.values() if m.bolsa == Bolsa.INTEGRAL]
-    a_cobrar = [m for m in vale_no_mes.values() if m.bolsa != Bolsa.INTEGRAL]
+    apadrinhados = [m for m in vale_no_mes.values() if m.bolsa == Bolsa.APADRINHADA]
+    # Bolsa integral não paga; apadrinhada é paga pela empresa (cobrança dela, não do responsável)
+    a_cobrar = [
+        m for m in vale_no_mes.values() if m.bolsa not in (Bolsa.INTEGRAL, Bolsa.APADRINHADA)
+    ]
 
     ainda_nao_comecaram = db.scalar(
         select(func.count())
         .select_from(Matricula)
         .where(
             Matricula.situacao == SituacaoMatricula.ATIVA,
-            Matricula.bolsa != Bolsa.INTEGRAL,
+            Matricula.bolsa.not_in((Bolsa.INTEGRAL, Bolsa.APADRINHADA)),
             Matricula.data_inicio > ultimo,
         )
     )
@@ -244,6 +248,7 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
         geradas=geradas,
         ja_existiam=len(a_cobrar) - geradas,
         bolsa_integral=len(com_bolsa_integral),
+        apadrinhados=len(apadrinhados),
         ainda_nao_comecaram=ainda_nao_comecaram or 0,
     )
 

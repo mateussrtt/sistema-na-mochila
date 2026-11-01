@@ -22,6 +22,8 @@ class MatriculaEntrada(BaseModel):
     bolsa: Bolsa = Bolsa.NENHUMA
     # Com bolsa integral o valor pode ficar em branco: a mensalidade é zero
     valor_mensalidade: Decimal | None = Field(default=None, validate_default=True)
+    # A empresa que paga: obrigatória na bolsa apadrinhada e proibida nas outras
+    padrinho_id: int | None = Field(default=None, gt=0, le=ID_MAXIMO, validate_default=True)
 
     @field_validator("data_inicio", mode="before")
     @classmethod
@@ -61,6 +63,26 @@ class MatriculaEntrada(BaseModel):
             raise ValueError("O valor da mensalidade é alto demais")
         return valor.quantize(Decimal("0.01"))
 
+    @field_validator("padrinho_id", mode="before")
+    @classmethod
+    def padrinho_nao_e_verdadeiro_ou_falso(cls, valor: object) -> object:
+        # Em Python, True vale 1: sem isso, "true" apontaria para o padrinho de número 1
+        if isinstance(valor, bool):
+            raise ValueError("Informe a empresa pelo número")
+        return valor
+
+    @field_validator("padrinho_id")
+    @classmethod
+    def padrinho_conforme_bolsa(cls, valor: int | None, info: ValidationInfo) -> int | None:
+        bolsa = info.data.get("bolsa")
+        if bolsa is None:
+            return valor  # a bolsa já deu erro: o erro dela basta
+        if bolsa == Bolsa.APADRINHADA and valor is None:
+            raise ValueError("Escolha a empresa que apadrinha o aluno")
+        if bolsa != Bolsa.APADRINHADA and valor is not None:
+            raise ValueError("Só a bolsa apadrinhada tem empresa")
+        return valor
+
 
 class MatriculaEncerramento(BaseModel):
     """Dados enviados para encerrar uma matrícula."""
@@ -90,6 +112,16 @@ class AlunoResumo(BaseModel):
     ativo: bool
 
 
+class PadrinhoResumo(BaseModel):
+    """Dados da empresa que aparecem junto da matrícula apadrinhada."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nome: str
+    ativo: bool
+
+
 class MatriculaLeitura(BaseModel):
     """Matrícula como a API devolve, já com o aluno."""
 
@@ -101,4 +133,5 @@ class MatriculaLeitura(BaseModel):
     data_encerramento: date | None
     valor_mensalidade: Decimal
     bolsa: Bolsa
+    padrinho: PadrinhoResumo | None
     situacao: SituacaoMatricula

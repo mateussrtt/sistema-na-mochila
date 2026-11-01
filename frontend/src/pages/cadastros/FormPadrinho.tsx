@@ -1,5 +1,5 @@
 import { Archive, ArchiveRestore } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { ApiError } from '../../api/client'
 import { salvarPadrinho, type Padrinho } from '../../api/padrinhos'
@@ -11,6 +11,7 @@ import {
   emailValido,
   mascaraCnpj,
   mascaraTelefone,
+  plural,
   telefoneValido,
 } from '../../utils/formato'
 
@@ -46,6 +47,13 @@ export default function FormPadrinho({ padrinho, aoSalvar, aoCancelar }: Props) 
   const [tentou, setTentou] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erroApi, setErroApi] = useState<Erros>({})
+  const [confirmandoInativacao, setConfirmandoInativacao] = useState(false)
+  const avisoDeInativacao = useRef<HTMLDivElement>(null)
+
+  // O aviso nasce no pé da gaveta, fora da área visível: leva o olhar até ele
+  useEffect(() => {
+    if (confirmandoInativacao) avisoDeInativacao.current?.scrollIntoView({ block: 'nearest' })
+  }, [confirmandoInativacao])
 
   function validar(): Erros {
     const erros: Erros = {}
@@ -211,6 +219,36 @@ export default function FormPadrinho({ padrinho, aoSalvar, aoCancelar }: Props) 
           </p>
         </fieldset>
 
+        {confirmandoInativacao && padrinho && (
+          <div className="subformulario" role="alert" ref={avisoDeInativacao}>
+            <h3>Inativar {padrinho.nome}?</h3>
+            <p>
+              {plural(padrinho.alunos_apadrinhados, 'aluno apadrinhado', 'alunos apadrinhados')} por
+              esta empresa {padrinho.alunos_apadrinhados === 1 ? 'continua' : 'continuam'} com a
+              matrícula ativa. A empresa inativa só deixa de poder apadrinhar novos alunos. Para um
+              aluno trocar de empresa ou voltar a pagar pelo responsável, encerre a matrícula dele e
+              faça outra.
+            </p>
+            <div className="subformulario-acoes">
+              <button
+                type="button"
+                className="botao botao-texto"
+                onClick={() => setConfirmandoInativacao(false)}
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                className="botao botao-secundario"
+                disabled={salvando}
+                onClick={() => void enviar(false, 'Padrinho inativado')}
+              >
+                Inativar mesmo assim
+              </button>
+            </div>
+          </div>
+        )}
+
         {erros.geral && (
           <p className="erro-geral" role="alert">
             {erros.geral}
@@ -223,13 +261,15 @@ export default function FormPadrinho({ padrinho, aoSalvar, aoCancelar }: Props) 
           <button
             type="button"
             className="botao botao-texto botao-com-icone"
-            disabled={salvando}
-            onClick={() =>
-              void enviar(
-                !padrinho.ativo,
-                padrinho.ativo ? 'Padrinho inativado' : 'Padrinho reativado',
-              )
-            }
+            disabled={salvando || confirmandoInativacao}
+            onClick={() => {
+              // Inativar uma empresa que ainda apadrinha alunos pede confirmação
+              if (padrinho.ativo && padrinho.alunos_apadrinhados > 0) {
+                setConfirmandoInativacao(true)
+                return
+              }
+              void enviar(!padrinho.ativo, padrinho.ativo ? 'Padrinho inativado' : 'Padrinho reativado')
+            }}
           >
             {padrinho.ativo ? (
               <Archive size={18} aria-hidden="true" />
