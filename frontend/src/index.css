@@ -1606,3 +1606,156 @@ fieldset.gaveta-conteudo {
   outline: 3px solid rgb(20 33 61 / 0.25);
   outline-offset: 2px;
 }
+
+/* ===== Mensalidades ===== */
+.seletor-mes {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 42px;
+  padding: 0 4px;
+  border: 1px solid var(--linha-forte);
+  border-radius: 999px;
+  background: var(--superficie);
+}
+
+.seletor-mes button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tinta-suave);
+  cursor: pointer;
+}
+
+.seletor-mes button:hover {
+  background: var(--realce);
+  color: var(--marinho);
+}
+
+.seletor-mes button:focus-visible {
+  outline: 3px solid rgb(20 33 61 / 0.25);
+  outline-offset: 1px;
+}
+
+.seletor-mes output {
+  display: block;
+  min-width: 150px;
+  padding: 0 6px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--marinho);
+}
+
+/* Só a primeira letra em maiúscula: "Novembro de 2026" */
+.seletor-mes output::first-letter {
+  text-transform: uppercase;
+}
+
+.segmentos-largos {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.segmentos .contagem {
+  margin-left: 7px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgb(20 33 61 / 0.08);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.totais {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.totais > div {
+  padding: 12px 16px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.totais dt {
+  font-size: 12.5px;
+  color: var(--tinta-suave);
+}
+
+.totais dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--marinho);
+}
+
+.totais .totais-atraso dd {
+  color: var(--erro);
+}
+
+.linha-parada {
+  grid-template-columns: auto minmax(0, 1fr) minmax(110px, 20%) auto;
+  cursor: default;
+}
+
+.linha-parada:hover {
+  background: transparent;
+}
+
+.etiqueta-a_vencer {
+  background: var(--laranja-suave);
+  color: #8a4510;
+}
+
+.etiqueta-atrasada {
+  background: var(--erro-suave);
+  color: var(--erro);
+}
+
+.etiqueta-paga {
+  background: var(--agua-suave);
+  color: var(--agua);
+}
+
+.regras {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--tinta-suave);
+  font-size: 14px;
+}
+
+.regras li + li {
+  margin-top: 6px;
+}
+
+@media (max-width: 860px) {
+  .totais {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .seletor-mes {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  /* Os 6 filtros ficam em 2 linhas de 3, bem alinhadas */
+  .segmentos-largos {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .segmentos-largos button {
+    padding-inline: 6px;
+  }
+
+  .linha-parada {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+}

@@ -68,3 +68,42 @@ export function lerValor(texto: string): number | null {
 export function plural(total: number, singular: string, plural: string): string {
   return `${total} ${total === 1 ? singular : plural}`
 }
+
+/** O mês de hoje no formato AAAA-MM */
+export function mesAtualIso(): string {
+  return hojeIso().slice(0, 7)
+}
+
+const MESES = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+]
+
+/** 2026-11 → novembro de 2026 */
+export function nomeDoMes(mes: string): string {
+  const achado = /^([0-9]{4})-(0[1-9]|1[0-2])$/.exec(mes)
+  if (!achado) return mes
+  return `${MESES[Number(achado[2]) - 1]} de ${achado[1]}`
+}
+
+/** Soma meses a um AAAA-MM: somarMeses('2026-12', 1) → '2027-01' */
+export function somarMeses(mes: string, quantos: number): string {
+  const [ano, numero] = mes.split('-').map(Number)
+  const total = ano * 12 + (numero - 1) + quantos
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`
+}
+
+/** Soma valores em reais ("150.00") sem erro de arredondamento: a conta é feita em centavos */
+export function somarValores(valores: string[]): number {
+  return valores.reduce((soma, valor) => soma + Math.round(Number(valor) * 100), 0) / 100
+}
