@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import Cadastros from './pages/cadastros/Cadastros'
 import ListaAlunos from './pages/cadastros/ListaAlunos'
 import ListaMatriculas from './pages/cadastros/ListaMatriculas'
+import ListaPadrinhos from './pages/cadastros/ListaPadrinhos'
 import ListaResponsaveis from './pages/cadastros/ListaResponsaveis'
 import EmConstrucao from './pages/EmConstrucao'
 import Entrar from './pages/Entrar'
@@ -25,6 +26,7 @@ export default function App() {
             <Route index element={<ListaAlunos />} />
             <Route path="responsaveis" element={<ListaResponsaveis />} />
             <Route path="matriculas" element={<ListaMatriculas />} />
+            <Route path="padrinhos" element={<ListaPadrinhos />} />
           </Route>
           <Route path="mensalidades" element={<Mensalidades />} />
           <Route path="pendencias" element={<Pendencias />} />

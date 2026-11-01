@@ -1976,3 +1976,34 @@ fieldset.gaveta-conteudo {
 .botao-perigo:hover:not(:disabled) {
   background: #8f1c12;
 }
+
+/* Com quatro abas, em tela de celular elas não cabem folgadas: ficam mais juntas e, se ainda
+   assim faltar espaço, rolam dentro da barra em vez de alargar a página */
+@media (max-width: 480px) {
+  .abas {
+    gap: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .abas::-webkit-scrollbar {
+    display: none;
+  }
+
+  .abas a {
+    flex: none;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+}
+
+/* Celulares estreitos (360 px, o mais comum no Android): as quatro abas ainda cabem */
+@media (max-width: 400px) {
+  .abas {
+    gap: 8px;
+  }
+
+  .abas a {
+    font-size: 14px;
+  }
+}

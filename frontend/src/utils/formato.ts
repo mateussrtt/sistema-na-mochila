@@ -26,6 +26,48 @@ export function telefoneValido(valor: string): boolean {
   return total === 10 || total === 11
 }
 
+/** Só letras e números, em maiúsculas e no máximo 14: o que sobra de um CNPJ digitado */
+export function limparCnpj(valor: string): string {
+  return valor
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, '')
+    .slice(0, 14)
+}
+
+/** Formata enquanto a pessoa digita: 11.222.333/0001-81 (também serve para o CNPJ alfanumérico) */
+export function mascaraCnpj(valor: string): string {
+  const c = limparCnpj(valor)
+  const cortes = [0, 2, 5, 8, 12, 14]
+  const separadores = ['', '.', '.', '/', '-']
+  let saida = ''
+  for (let i = 0; i < cortes.length - 1; i++) {
+    const trecho = c.slice(cortes[i], cortes[i + 1])
+    if (!trecho) break
+    saida += separadores[i] + trecho
+  }
+  return saida
+}
+
+const PESOS_CNPJ_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+const PESOS_CNPJ_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+
+function digitoDoCnpj(caracteres: string, pesos: number[]): number {
+  // "0" a "9" valem 0 a 9 e "A" a "Z" valem 17 a 42: a conta do CNPJ alfanumérico, que dá o
+  // mesmo resultado do CNPJ só com números
+  const soma = [...caracteres].reduce((total, c, i) => total + (c.charCodeAt(0) - 48) * pesos[i], 0)
+  const resto = soma % 11
+  return resto < 2 ? 0 : 11 - resto
+}
+
+/** Confere o formato e os dois dígitos verificadores, igual ao servidor */
+export function cnpjValido(valor: string): boolean {
+  const c = limparCnpj(valor)
+  if (!/^[0-9A-Z]{12}[0-9]{2}$/.test(c) || new Set(c).size === 1) return false
+  const primeiro = digitoDoCnpj(c.slice(0, 12), PESOS_CNPJ_1)
+  const segundo = digitoDoCnpj(c.slice(0, 12) + primeiro, PESOS_CNPJ_2)
+  return c.slice(12) === `${primeiro}${segundo}`
+}
+
 export function emailValido(valor: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor.trim())
 }
