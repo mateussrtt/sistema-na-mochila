@@ -5,7 +5,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
-from app.routers import alunos, auth, health, matriculas, mensalidades, responsaveis, usuarios
+from app.routers import (
+    alunos,
+    auth,
+    health,
+    matriculas,
+    mensalidades,
+    pendencias,
+    responsaveis,
+    usuarios,
+)
 
 settings = get_settings()
 
@@ -45,4 +54,5 @@ app.include_router(alunos.router, prefix="/api")
 app.include_router(responsaveis.router, prefix="/api")
 app.include_router(matriculas.router, prefix="/api")
 app.include_router(mensalidades.router, prefix="/api")
+app.include_router(pendencias.router, prefix="/api")
 app.include_router(usuarios.router, prefix="/api")

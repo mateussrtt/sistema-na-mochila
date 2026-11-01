@@ -21,6 +21,7 @@ from app.models import (
     SituacaoMensalidade,
     StatusMensalidade,
     data_de_vencimento,
+    esta_atrasada,
     situacao_da_mensalidade,
 )
 from app.schemas.comum import ID_MAXIMO, termo_de_busca
@@ -143,7 +144,7 @@ def listar(
     if situacao == "a_vencer":
         consulta = consulta.where(pendente, Mensalidade.data_vencimento >= hoje)
     elif situacao == "atrasada":
-        consulta = consulta.where(pendente, Mensalidade.data_vencimento < hoje)
+        consulta = consulta.where(esta_atrasada(hoje))
     elif situacao != "todas":
         consulta = consulta.where(Mensalidade.status == StatusMensalidade(situacao))
 
