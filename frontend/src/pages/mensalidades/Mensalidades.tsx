@@ -46,13 +46,19 @@ function mensagemDaGeracao(r: ResultadoDaGeracao): string {
     partes.push(plural(r.geradas, 'mensalidade gerada', 'mensalidades geradas'))
   } else if (r.ja_existiam > 0) {
     partes.push('Todas as mensalidades deste mês já estavam geradas')
+  } else if (r.apadrinhados_incluidos > 0) {
+    partes.push('Nenhuma mensalidade de responsável a gerar')
   } else {
     partes.push('Nenhuma mensalidade a gerar')
   }
   const detalhes: string[] = []
   if (r.geradas > 0 && r.ja_existiam > 0) detalhes.push(`${r.ja_existiam} já existiam`)
   if (r.bolsa_integral > 0) detalhes.push(`${r.bolsa_integral} com bolsa integral`)
-  if (r.apadrinhados > 0) {
+  if (r.apadrinhados_incluidos > 0) {
+    detalhes.push(
+      `${plural(r.apadrinhados_incluidos, 'apadrinhado incluído', 'apadrinhados incluídos')} na cobrança da empresa`,
+    )
+  } else if (r.apadrinhados > 0) {
     detalhes.push(
       plural(
         r.apadrinhados,

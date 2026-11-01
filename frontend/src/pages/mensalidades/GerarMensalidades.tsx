@@ -46,8 +46,8 @@ export default function GerarMensalidades({ mes, aoGerar, aoCancelar }: Props) {
           <li>Se o aluno saiu e voltou no mesmo mês, vale a matrícula mais recente.</li>
           <li>Quem tem bolsa integral não paga e fica de fora.</li>
           <li>
-            Quem é apadrinhado por uma empresa também fica de fora: a empresa é quem paga, e não o
-            responsável.
+            Quem é apadrinhado por uma empresa não é cobrado do responsável: a mensalidade dele
+            entra na cobrança da empresa, na tela Cobranças.
           </li>
           <li>Matrículas que só começam depois deste mês ficam de fora.</li>
           <li>

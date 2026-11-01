@@ -9,6 +9,7 @@ import ListaResponsaveis from './pages/cadastros/ListaResponsaveis'
 import EmConstrucao from './pages/EmConstrucao'
 import Entrar from './pages/Entrar'
 import Inicio from './pages/Inicio'
+import Cobrancas from './pages/cobrancas/Cobrancas'
 import Mensalidades from './pages/mensalidades/Mensalidades'
 import NaoEncontrada from './pages/NaoEncontrada'
 import Pendencias from './pages/pendencias/Pendencias'
@@ -30,6 +31,7 @@ export default function App() {
           </Route>
           <Route path="mensalidades" element={<Mensalidades />} />
           <Route path="pendencias" element={<Pendencias />} />
+          <Route path="cobrancas" element={<Cobrancas />} />
           <Route path="despesas" element={<EmConstrucao titulo="Despesas" />} />
           <Route path="receitas" element={<EmConstrucao titulo="Receitas e patrocínios" />} />
           <Route path="caixa" element={<EmConstrucao titulo="Saldo e fluxo de caixa" />} />

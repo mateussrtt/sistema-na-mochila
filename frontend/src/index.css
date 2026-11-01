@@ -2049,3 +2049,60 @@ fieldset.gaveta-conteudo {
     flex: 1 1 100%;
   }
 }
+
+/* Cobranças das empresas padrinhas */
+.etiqueta-a_emitir {
+  background: var(--linha);
+  color: var(--tinta);
+}
+
+.destaque-emitir {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--laranja);
+  border-radius: 12px;
+  background: var(--laranja-suave);
+  color: #8a4510;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.destaque-emitir:hover {
+  filter: brightness(0.97);
+}
+
+.destaque-emitir:focus-visible {
+  outline: 3px solid var(--laranja);
+  outline-offset: 2px;
+}
+
+.destaque-emitir-atraso {
+  border-color: var(--erro);
+  background: var(--erro-suave);
+  color: var(--erro);
+}
+
+.itens-cobranca {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itens-cobranca li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--linha);
+}
+
+.itens-cobranca li:last-child {
+  border-bottom: 0;
+}

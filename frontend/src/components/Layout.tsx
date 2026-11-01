@@ -1,4 +1,5 @@
 import {
+  Building2,
   ChartNoAxesColumn,
   HandCoins,
   House,
@@ -27,6 +28,7 @@ const menu = [
   { to: '/alunos', rotulo: 'Alunos', Icone: Users },
   { to: '/mensalidades', rotulo: 'Mensalidades', Icone: ReceiptText },
   { to: '/pendencias', rotulo: 'Pendências', Icone: TriangleAlert },
+  { to: '/cobrancas', rotulo: 'Cobrança de padrinhos', Icone: Building2 },
   { to: '/despesas', rotulo: 'Despesas', Icone: TrendingDown },
   { to: '/receitas', rotulo: 'Receitas', Icone: HandCoins },
   { to: '/caixa', rotulo: 'Caixa', Icone: ChartNoAxesColumn },
