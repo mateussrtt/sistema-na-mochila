@@ -73,6 +73,9 @@ class GeracaoResultado(BaseModel):
     bolsa_integral: int
     # Alunos apadrinhados: quem cobra é a empresa, não o responsável
     apadrinhados: int
+    # Quantos desses entraram agora na cobrança da empresa e quantas cobranças nasceram
+    apadrinhados_incluidos: int
+    cobrancas_criadas: int
     ainda_nao_comecaram: int
 
 

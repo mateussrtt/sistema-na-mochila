@@ -6,6 +6,15 @@ para o Alembic enxergá-la ao gerar as migrações.
 
 from app.db.base import Base
 from app.models.aluno import Aluno, aluno_responsavel
+from app.models.cobranca import (
+    Cobranca,
+    FormaDePagamentoCobranca,
+    PagamentoCobranca,
+    SituacaoCobranca,
+    StatusCobranca,
+    emissao_atrasada,
+    situacao_da_cobranca,
+)
 from app.models.matricula import Bolsa, Matricula, SituacaoMatricula
 from app.models.mensalidade import (
     DIA_DO_VENCIMENTO,
@@ -26,19 +35,26 @@ __all__ = [
     "Aluno",
     "Base",
     "Bolsa",
+    "Cobranca",
     "FormaDePagamento",
+    "FormaDePagamentoCobranca",
     "Matricula",
     "Mensalidade",
     "Padrinho",
     "Pagamento",
+    "PagamentoCobranca",
     "Perfil",
     "Responsavel",
+    "SituacaoCobranca",
     "SituacaoMatricula",
     "SituacaoMensalidade",
+    "StatusCobranca",
     "StatusMensalidade",
     "Usuario",
     "aluno_responsavel",
     "data_de_vencimento",
+    "emissao_atrasada",
     "esta_atrasada",
+    "situacao_da_cobranca",
     "situacao_da_mensalidade",
 ]

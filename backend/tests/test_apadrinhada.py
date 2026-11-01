@@ -593,8 +593,11 @@ def test_a_matricula_apadrinhada_nao_gera_mensalidade_para_o_responsavel(api, no
         "ja_existiam": 0,
         "bolsa_integral": 0,
         "apadrinhados": 1,
+        "apadrinhados_incluidos": 1,
+        "cobrancas_criadas": 1,
         "ainda_nao_comecaram": 0,
     }
+    # A mensalidade dele existe, mas na cobrança da empresa: não aparece para o responsável
     assert api.get("/api/mensalidades").json() == []
 
 
@@ -620,8 +623,10 @@ def test_na_mesma_geracao_so_quem_paga_pelo_responsavel_e_cobrado(api, novo_alun
 def test_gerar_de_novo_nao_muda_nada_para_o_apadrinhado(api, novo_aluno):
     apadrinhar(api, novo_aluno(), novo_padrinho(api))
     primeiro, segundo = gerar(api), gerar(api)
-    assert primeiro == segundo
-    assert segundo["apadrinhados"] == 1
+    assert (primeiro["apadrinhados_incluidos"], primeiro["cobrancas_criadas"]) == (1, 1)
+    # Na segunda vez ele continua apadrinhado, mas já estava na cobrança: nada entra de novo
+    assert (segundo["apadrinhados"], segundo["apadrinhados_incluidos"]) == (1, 0)
+    assert segundo["cobrancas_criadas"] == 0
     assert api.get("/api/mensalidades").json() == []
 
 
