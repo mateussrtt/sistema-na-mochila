@@ -269,8 +269,10 @@ def test_resposta_nao_expoe_contatos_dos_responsaveis(api, aluno):
         "data_encerramento",
         "valor_mensalidade",
         "bolsa",
+        "padrinho",
         "situacao",
     }
+    assert matricula["padrinho"] is None  # só a matrícula apadrinhada tem empresa
     assert set(matricula["aluno"]) == {"id", "nome", "ativo"}
     assert "31988887777" not in api.get("/api/matriculas").text
 

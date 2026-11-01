@@ -1,13 +1,13 @@
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.acesso import LOGADO, PODE_EDITAR
 from app.db.session import get_db
-from app.models import Padrinho
+from app.models import Matricula, Padrinho, SituacaoMatricula
 from app.schemas.comum import ID_MAXIMO, termo_de_busca
 from app.schemas.padrinho import PadrinhoEntrada, PadrinhoLeitura
 
@@ -25,6 +25,27 @@ def busca_padrinho(db: Session, padrinho_id: int) -> Padrinho:
     if padrinho is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Padrinho não encontrado")
     return padrinho
+
+
+def com_alunos_apadrinhados(db: Session, padrinhos: list[Padrinho]) -> list[PadrinhoLeitura]:
+    """Monta a resposta com quantos alunos ativos cada empresa apadrinha, numa consulta só."""
+    contagem: dict[int, int] = {}
+    if padrinhos:
+        linhas = db.execute(
+            select(Matricula.padrinho_id, func.count())
+            .where(
+                Matricula.padrinho_id.in_([p.id for p in padrinhos]),
+                Matricula.situacao == SituacaoMatricula.ATIVA,
+            )
+            .group_by(Matricula.padrinho_id)
+        )
+        contagem = {padrinho_id: total for padrinho_id, total in linhas}
+    return [
+        PadrinhoLeitura.model_validate(p).model_copy(
+            update={"alunos_apadrinhados": contagem.get(p.id, 0)}
+        )
+        for p in padrinhos
+    ]
 
 
 def exige_cnpj_livre(db: Session, cnpj: str | None, ignorar_id: int | None = None) -> None:
@@ -58,7 +79,7 @@ def listar(
     db: Banco,
     busca: str | None = None,
     situacao: Literal["ativos", "inativos", "todos"] = "ativos",
-) -> list[Padrinho]:
+) -> list[PadrinhoLeitura]:
     """Lista os padrinhos em ordem alfabética. A busca procura no nome e no contato."""
     consulta = select(Padrinho).order_by(Padrinho.nome, Padrinho.id)
     if situacao != "todos":
@@ -72,7 +93,7 @@ def listar(
                 Padrinho.contato.icontains(termo, autoescape=True),
             )
         )
-    return list(db.scalars(consulta))
+    return com_alunos_apadrinhados(db, list(db.scalars(consulta)))
 
 
 @router.post(
@@ -81,21 +102,21 @@ def listar(
     status_code=status.HTTP_201_CREATED,
     dependencies=[PODE_EDITAR],
 )
-def cadastrar(dados: PadrinhoEntrada, db: Banco) -> Padrinho:
+def cadastrar(dados: PadrinhoEntrada, db: Banco) -> PadrinhoLeitura:
     exige_cnpj_livre(db, dados.cnpj)
     padrinho = Padrinho(**dados.model_dump())
     db.add(padrinho)
     grava(db)
-    return padrinho
+    return com_alunos_apadrinhados(db, [padrinho])[0]
 
 
 @router.get("/{padrinho_id}", response_model=PadrinhoLeitura)
-def consultar(padrinho_id: PadrinhoId, db: Banco) -> Padrinho:
-    return busca_padrinho(db, padrinho_id)
+def consultar(padrinho_id: PadrinhoId, db: Banco) -> PadrinhoLeitura:
+    return com_alunos_apadrinhados(db, [busca_padrinho(db, padrinho_id)])[0]
 
 
 @router.put("/{padrinho_id}", response_model=PadrinhoLeitura, dependencies=[PODE_EDITAR])
-def editar(padrinho_id: PadrinhoId, dados: PadrinhoEntrada, db: Banco) -> Padrinho:
+def editar(padrinho_id: PadrinhoId, dados: PadrinhoEntrada, db: Banco) -> PadrinhoLeitura:
     """Edita o padrinho. Para inativar ou reativar, envie "ativo": false ou true.
 
     O padrinho nunca é apagado: inativar só o tira das listas de quem está em atividade.
@@ -105,4 +126,4 @@ def editar(padrinho_id: PadrinhoId, dados: PadrinhoEntrada, db: Banco) -> Padrin
     for campo, valor in dados.model_dump().items():
         setattr(padrinho, campo, valor)
     grava(db)
-    return padrinho
+    return com_alunos_apadrinhados(db, [padrinho])[0]

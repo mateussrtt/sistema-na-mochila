@@ -163,3 +163,5 @@ class PadrinhoLeitura(BaseModel):
     dia_vencimento: int
     emitir_ate_dia: int | None
     ativo: bool
+    # Alunos com matrícula ativa apadrinhados por esta empresa (para avisar antes de inativar)
+    alunos_apadrinhados: int = 0

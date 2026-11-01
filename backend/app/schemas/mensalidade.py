@@ -71,6 +71,8 @@ class GeracaoResultado(BaseModel):
     geradas: int
     ja_existiam: int
     bolsa_integral: int
+    # Alunos apadrinhados: quem cobra é a empresa, não o responsável
+    apadrinhados: int
     ainda_nao_comecaram: int
 
 
