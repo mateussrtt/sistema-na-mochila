@@ -7,17 +7,31 @@ para o Alembic enxergá-la ao gerar as migrações.
 from app.db.base import Base
 from app.models.aluno import Aluno, aluno_responsavel
 from app.models.matricula import Bolsa, Matricula, SituacaoMatricula
+from app.models.mensalidade import (
+    DIA_DO_VENCIMENTO,
+    Mensalidade,
+    SituacaoMensalidade,
+    StatusMensalidade,
+    data_de_vencimento,
+    situacao_da_mensalidade,
+)
 from app.models.responsavel import Responsavel
 from app.models.usuario import Perfil, Usuario
 
 __all__ = [
+    "DIA_DO_VENCIMENTO",
     "Aluno",
     "Base",
     "Bolsa",
     "Matricula",
+    "Mensalidade",
     "Perfil",
     "Responsavel",
     "SituacaoMatricula",
+    "SituacaoMensalidade",
+    "StatusMensalidade",
     "Usuario",
     "aluno_responsavel",
+    "data_de_vencimento",
+    "situacao_da_mensalidade",
 ]
