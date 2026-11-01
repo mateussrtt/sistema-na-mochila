@@ -2007,3 +2007,45 @@ fieldset.gaveta-conteudo {
     font-size: 14px;
   }
 }
+
+/* ===== Matrícula apadrinhada ===== */
+.segmentos-quatro {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+}
+
+.segmentos-quatro button {
+  padding-inline: 6px;
+}
+
+/* Filtro por empresa, no mesmo formato dos chips da barra */
+.filtro-select {
+  height: 42px;
+  max-width: 100%;
+  padding: 0 34px 0 14px;
+  border: 1px solid var(--linha-forte);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--tinta-suave);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.filtro-select:focus-visible {
+  border-color: var(--marinho);
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(20 33 61 / 0.12);
+}
+
+@media (max-width: 860px) {
+  .segmentos-quatro {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filtro-select {
+    flex: 1 1 100%;
+  }
+}

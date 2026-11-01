@@ -45,6 +45,10 @@ export default function GerarMensalidades({ mes, aoGerar, aoCancelar }: Props) {
           </li>
           <li>Se o aluno saiu e voltou no mesmo mês, vale a matrícula mais recente.</li>
           <li>Quem tem bolsa integral não paga e fica de fora.</li>
+          <li>
+            Quem é apadrinhado por uma empresa também fica de fora: a empresa é quem paga, e não o
+            responsável.
+          </li>
           <li>Matrículas que só começam depois deste mês ficam de fora.</li>
           <li>
             Pode gerar de novo sem medo: o que já existe não é repetido, só entra o que estiver

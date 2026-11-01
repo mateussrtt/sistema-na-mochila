@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, GraduationCap, Plus } from 'lucide-react'
+import { Building2, CalendarDays, ChevronRight, GraduationCap, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import {
@@ -7,6 +7,7 @@ import {
   type Matricula,
   type SituacaoMatricula,
 } from '../../api/cadastros'
+import { listarPadrinhos, type Padrinho } from '../../api/padrinhos'
 import Aviso from '../../components/Aviso'
 import Busca from '../../components/Busca'
 import { Carregando, FalhaAoCarregar, Vazio } from '../../components/EstadoLista'
@@ -31,6 +32,7 @@ function resumo(
   situacao: SituacaoMatricula,
   busca: string,
   soBolsistas: boolean,
+  empresa: string | undefined,
 ): string {
   const matriculas = plural(total, 'matrícula', 'matrículas')
   const sufixo = total === 1 ? '' : 's'
@@ -38,7 +40,8 @@ function resumo(
     situacao
   ]
   const bolsistas = soBolsistas ? ' com bolsa' : ''
-  const texto = `${matriculas}${filtro}${bolsistas}`
+  const deEmpresa = empresa ? ` apadrinhada${total === 1 ? '' : 's'} por ${empresa}` : ''
+  const texto = `${matriculas}${filtro}${bolsistas}${deEmpresa}`
   return busca ? `${texto} para “${busca}”` : texto
 }
 
@@ -46,6 +49,8 @@ export default function ListaMatriculas() {
   const [busca, setBusca] = useState('')
   const [situacao, setSituacao] = useState<SituacaoMatricula>('ativas')
   const [soBolsistas, setSoBolsistas] = useState(false)
+  const [padrinhoId, setPadrinhoId] = useState<number | null>(null)
+  const [padrinhos, setPadrinhos] = useState<Padrinho[]>([])
   const [matriculas, setMatriculas] = useState<Matricula[] | null>(null)
   const [falhou, setFalhou] = useState(false)
   const [versao, setVersao] = useState(0)
@@ -54,9 +59,18 @@ export default function ListaMatriculas() {
   const buscaAtrasada = useAtraso(busca.trim())
   const { podeEditar } = useSessao()
 
+  // As empresas (ativas e inativas) para o filtro. Sem elas, o filtro simplesmente não aparece
   useEffect(() => {
     const controle = new AbortController()
-    listarMatriculas(buscaAtrasada, situacao, soBolsistas, controle.signal)
+    listarPadrinhos('', 'todos', controle.signal)
+      .then(setPadrinhos)
+      .catch(() => undefined)
+    return () => controle.abort()
+  }, [versao])
+
+  useEffect(() => {
+    const controle = new AbortController()
+    listarMatriculas(buscaAtrasada, situacao, soBolsistas, controle.signal, padrinhoId)
       .then((lista) => {
         setMatriculas(lista)
         setFalhou(false)
@@ -65,7 +79,7 @@ export default function ListaMatriculas() {
         if (!controle.signal.aborted) setFalhou(true)
       })
     return () => controle.abort()
-  }, [buscaAtrasada, situacao, soBolsistas, versao])
+  }, [buscaAtrasada, situacao, soBolsistas, padrinhoId, versao])
 
   function recarregar() {
     setFalhou(false)
@@ -87,7 +101,7 @@ export default function ListaMatriculas() {
           rotulo="Buscar matrículas"
           valor={busca}
           aoMudar={setBusca}
-          placeholder="Buscar matrícula pelo nome do aluno"
+          placeholder="Buscar aluno ou empresa"
         />
         <div className="segmentos" role="group" aria-label="Situação">
           {SITUACOES.map((s) => (
@@ -110,6 +124,22 @@ export default function ListaMatriculas() {
           <GraduationCap size={16} aria-hidden="true" />
           Só bolsistas
         </button>
+        {padrinhos.length > 0 && (
+          <select
+            className="filtro-select"
+            aria-label="Empresa padrinha"
+            value={padrinhoId ?? ''}
+            onChange={(e) => setPadrinhoId(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Todas as empresas</option>
+            {padrinhos.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+                {!p.ativo && ' (inativa)'}
+              </option>
+            ))}
+          </select>
+        )}
         {podeEditar && (
           <button
             type="button"
@@ -127,7 +157,12 @@ export default function ListaMatriculas() {
       ) : matriculas === null ? (
         <Carregando />
       ) : matriculas.length === 0 ? (
-        soBolsistas && !buscaAtrasada ? (
+        padrinhoId && !buscaAtrasada ? (
+          <Vazio
+            titulo="Nenhuma matrícula apadrinhada por esta empresa"
+            texto="Matricule um aluno escolhendo a bolsa apadrinhada e esta empresa."
+          />
+        ) : soBolsistas && !buscaAtrasada ? (
           <Vazio
             titulo="Nenhum bolsista nesta lista"
             texto="Matrículas com bolsa parcial ou integral aparecem aqui."
@@ -162,7 +197,13 @@ export default function ListaMatriculas() {
       ) : (
         <>
           <p className="resumo">
-            {resumo(matriculas.length, situacao, buscaAtrasada, soBolsistas)}
+            {resumo(
+              matriculas.length,
+              situacao,
+              buscaAtrasada,
+              soBolsistas,
+              padrinhos.find((p) => p.id === padrinhoId)?.nome,
+            )}
           </p>
           <ul className="lista">
             {matriculas.map((matricula) => {
@@ -193,6 +234,12 @@ export default function ListaMatriculas() {
                             ? `${formatarData(matricula.data_inicio)} a ${formatarData(matricula.data_encerramento)}`
                             : `Desde ${formatarData(matricula.data_inicio)}`}
                         </span>
+                        {matricula.padrinho && (
+                          <span>
+                            <Building2 size={14} aria-hidden="true" />
+                            Apadrinhado por {matricula.padrinho.nome}
+                          </span>
+                        )}
                       </span>
                     </span>
                     <span className="linha-lateral">

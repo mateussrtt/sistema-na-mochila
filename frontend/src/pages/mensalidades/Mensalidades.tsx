@@ -52,6 +52,15 @@ function mensagemDaGeracao(r: ResultadoDaGeracao): string {
   const detalhes: string[] = []
   if (r.geradas > 0 && r.ja_existiam > 0) detalhes.push(`${r.ja_existiam} já existiam`)
   if (r.bolsa_integral > 0) detalhes.push(`${r.bolsa_integral} com bolsa integral`)
+  if (r.apadrinhados > 0) {
+    detalhes.push(
+      plural(
+        r.apadrinhados,
+        'apadrinhado, cobrado da empresa',
+        'apadrinhados, cobrados da empresa',
+      ),
+    )
+  }
   if (r.ainda_nao_comecaram > 0) detalhes.push(`${r.ainda_nao_comecaram} ainda não começaram`)
   return detalhes.length > 0 ? `${partes[0]} (${detalhes.join(', ')})` : partes[0]
 }

@@ -62,6 +62,15 @@ export default function DetalheMatricula({ matricula, aoEncerrar, aoFechar }: Pr
           </dd>
           <dt>Bolsa</dt>
           <dd>{NOME_DA_BOLSA[matricula.bolsa]}</dd>
+          {matricula.padrinho && (
+            <>
+              <dt>Apadrinhado por</dt>
+              <dd>
+                {matricula.padrinho.nome}
+                {!matricula.padrinho.ativo && ' (empresa inativa)'}
+              </dd>
+            </>
+          )}
           <dt>Início</dt>
           <dd>{formatarData(matricula.data_inicio)}</dd>
           <dt>Situação</dt>
@@ -71,6 +80,13 @@ export default function DetalheMatricula({ matricula, aoEncerrar, aoFechar }: Pr
               : `Encerrada em ${formatarData(matricula.data_encerramento ?? matricula.data_inicio)}`}
           </dd>
         </dl>
+
+        {matricula.padrinho && ativa && (
+          <p className="campo-dica">
+            A empresa paga 100% da mensalidade; o responsável não é cobrado. Para trocar de empresa
+            ou voltar a cobrar o responsável, encerre esta matrícula e faça outra.
+          </p>
+        )}
 
         {encerravel && (
           <fieldset className="grupo">
