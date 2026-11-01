@@ -11,6 +11,7 @@ from app.routers import (
     health,
     matriculas,
     mensalidades,
+    padrinhos,
     pendencias,
     responsaveis,
     usuarios,
@@ -54,5 +55,6 @@ app.include_router(alunos.router, prefix="/api")
 app.include_router(responsaveis.router, prefix="/api")
 app.include_router(matriculas.router, prefix="/api")
 app.include_router(mensalidades.router, prefix="/api")
+app.include_router(padrinhos.router, prefix="/api")
 app.include_router(pendencias.router, prefix="/api")
 app.include_router(usuarios.router, prefix="/api")
