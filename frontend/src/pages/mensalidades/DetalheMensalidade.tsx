@@ -20,11 +20,12 @@ import {
   lerValor,
   nomeDoMes,
 } from '../../utils/formato'
+import AlterarMensalidade from './AlterarMensalidade'
 
 type Props = {
   mensalidade: Mensalidade
-  /** Chamado depois de registrar o pagamento, com a mensagem de confirmação */
-  aoPagar: (mensagem: string) => void
+  /** Chamado depois de registrar o pagamento, isentar ou cancelar, com a mensagem de confirmação */
+  aoConcluir: (mensagem: string) => void
   /** A API disse que a mensalidade mudou (ex.: já foi paga por outra pessoa): recarrega a lista */
   aoDesatualizar: () => void
   aoFechar: () => void
@@ -49,11 +50,12 @@ function erroDoValor(texto: string): string | undefined {
 /** Dados da mensalidade. Pendente: registra o pagamento. Paga: mostra o que foi registrado. */
 export default function DetalheMensalidade({
   mensalidade,
-  aoPagar,
+  aoConcluir,
   aoDesatualizar,
   aoFechar,
 }: Props) {
-  const { podeEditar } = useSessao()
+  const { podeEditar, ehAdmin } = useSessao()
+  const [alterando, setAlterando] = useState(false)
   const [data, setData] = useState(hojeIso())
   const [valor, setValor] = useState(mensalidade.valor.replace('.', ','))
   const [forma, setForma] = useState<FormaDePagamento | null>(null)
@@ -64,6 +66,8 @@ export default function DetalheMensalidade({
 
   const pendente = mensalidade.status === 'pendente'
   const registravel = pendente && podeEditar
+  // Só o administrador isenta ou cancela, e só enquanto a mensalidade está pendente
+  const alteravel = pendente && ehAdmin
   const pagamento = mensalidade.pagamento
 
   const valorLido = lerValor(valor.trim())
@@ -102,7 +106,7 @@ export default function DetalheMensalidade({
         forma_pagamento: forma,
         observacao: observacao.trim(),
       })
-      aoPagar(`Pagamento de ${mensalidade.aluno.nome} registrado`)
+      aoConcluir(`Pagamento de ${mensalidade.aluno.nome} registrado`)
     } catch (erro) {
       const campos = erro instanceof ApiError ? erro.campos : {}
       const doServidor: Erros = {}
@@ -119,6 +123,17 @@ export default function DetalheMensalidade({
     } finally {
       setSalvando(false)
     }
+  }
+
+  if (alterando) {
+    return (
+      <AlterarMensalidade
+        mensalidade={mensalidade}
+        aoAlterar={aoConcluir}
+        aoDesatualizar={aoDesatualizar}
+        aoVoltar={() => setAlterando(false)}
+      />
+    )
   }
 
   return (
@@ -160,6 +175,21 @@ export default function DetalheMensalidade({
               <dt>Registrado por</dt>
               <dd>
                 {pagamento.registrado_por}, em {formatarDataHora(pagamento.registrado_em)}
+              </dd>
+            </dl>
+          </fieldset>
+        )}
+
+        {mensalidade.motivo && (
+          <fieldset className="grupo">
+            <legend>{mensalidade.status === 'isenta' ? 'Isenção' : 'Cancelamento'}</legend>
+            <dl className="dados">
+              <dt>Motivo</dt>
+              <dd>{mensalidade.motivo}</dd>
+              <dt>Registrado por</dt>
+              <dd>
+                {mensalidade.alterado_por}
+                {mensalidade.alterado_em && `, em ${formatarDataHora(mensalidade.alterado_em)}`}
               </dd>
             </dl>
           </fieldset>
@@ -252,7 +282,13 @@ export default function DetalheMensalidade({
       </div>
 
       <footer className="gaveta-rodape">
-        <span />
+        {alteravel ? (
+          <button type="button" className="botao botao-texto" onClick={() => setAlterando(true)}>
+            Isentar ou cancelar…
+          </button>
+        ) : (
+          <span />
+        )}
         <div className="gaveta-rodape-acoes">
           <button type="button" className="botao botao-texto" onClick={aoFechar}>
             {registravel ? 'Cancelar' : 'Fechar'}

@@ -1965,3 +1965,14 @@ fieldset.gaveta-conteudo {
     border-top: 1px dashed var(--linha);
   }
 }
+
+/* Ação que não se desfaz pela tela: isentar ou cancelar uma mensalidade */
+.botao-perigo {
+  background: var(--erro);
+  color: #fff;
+  font-weight: 600;
+}
+
+.botao-perigo:hover:not(:disabled) {
+  background: #8f1c12;
+}

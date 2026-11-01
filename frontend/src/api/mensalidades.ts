@@ -54,6 +54,10 @@ export type Mensalidade = {
   dias_em_atraso: number
   /** Só a mensalidade paga tem pagamento */
   pagamento: Pagamento | null
+  /** Só a mensalidade isenta ou cancelada tem motivo, quem alterou e quando (ISO 8601) */
+  motivo: string | null
+  alterado_por: string | null
+  alterado_em: string | null
 }
 
 export type ResultadoDaGeracao = {
@@ -72,6 +76,16 @@ export function listarMensalidades(mes: string, busca: string, signal?: AbortSig
 
 export function registrarPagamento(id: number, pagamento: NovoPagamento) {
   return apiEnviar<Mensalidade>('POST', `/api/mensalidades/${id}/pagamento`, pagamento)
+}
+
+/** Só o administrador. Só uma mensalidade pendente pode ser isentada (RF14, RN13). */
+export function isentarMensalidade(id: number, motivo: string) {
+  return apiEnviar<Mensalidade>('PATCH', `/api/mensalidades/${id}/isentar`, { motivo })
+}
+
+/** Só o administrador. A mensalidade continua na lista, com o motivo (RN12). */
+export function cancelarMensalidade(id: number, motivo: string) {
+  return apiEnviar<Mensalidade>('PATCH', `/api/mensalidades/${id}/cancelar`, { motivo })
 }
 
 export function gerarMensalidades(mes: string) {

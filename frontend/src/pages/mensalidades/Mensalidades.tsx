@@ -65,6 +65,13 @@ function quando(m: Mensalidade): string {
   return `Vencimento em ${vencimento}`
 }
 
+function tituloDoPainel(m: Mensalidade | null): string {
+  if (m?.status === 'paga') return 'Pagamento'
+  if (m?.status === 'isenta') return 'Mensalidade isenta'
+  if (m?.status === 'cancelada') return 'Mensalidade cancelada'
+  return 'Mensalidade'
+}
+
 export default function Mensalidades() {
   const [mes, setMes] = useState(mesAtualIso)
   const [filtro, setFiltro] = useState<Filtro>('todas')
@@ -74,7 +81,7 @@ export default function Mensalidades() {
   const [falhou, setFalhou] = useState(false)
   const [versao, setVersao] = useState(0)
   const [gerando, setGerando] = useState(false)
-  // Mensalidade clicada, aberta no painel de pagamento
+  // Mensalidade clicada, aberta no painel (pagamento, isenção ou dados do que já foi feito)
   const [clicada, setClicada] = useState<Mensalidade | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const buscaAtrasada = useAtraso(busca.trim())
@@ -111,7 +118,7 @@ export default function Mensalidades() {
     recarregar()
   }
 
-  function aoPagar(mensagem: string) {
+  function aoConcluir(mensagem: string) {
     setClicada(null)
     setAviso(mensagem)
     recarregar()
@@ -266,8 +273,9 @@ export default function Mensalidades() {
               </p>
               <ul className="lista">
                 {visiveis.map((m) => {
-                  // Paga: qualquer perfil vê os dados. Pendente: só quem pode editar registra o pagamento
-                  const abre = m.status === 'paga' || (m.status === 'pendente' && podeEditar)
+                  // Paga, isenta e cancelada: qualquer perfil vê os dados (e o motivo). Pendente: só quem
+                  // pode editar abre, para registrar o pagamento (o administrador também isenta ou cancela)
+                  const abre = m.status !== 'pendente' || podeEditar
                   const conteudo = (
                     <>
                       <Monograma nome={m.aluno.nome} apagado={!m.aluno.ativo} />
@@ -327,7 +335,7 @@ export default function Mensalidades() {
 
       <Gaveta
         aberta={aberta !== null}
-        titulo={aberta?.status === 'pendente' && podeEditar ? 'Registrar pagamento' : 'Pagamento'}
+        titulo={tituloDoPainel(aberta)}
         descricao={
           aberta ? `${aberta.aluno.nome} · ${nomeDoMes(aberta.competencia.slice(0, 7))}` : ''
         }
@@ -337,7 +345,7 @@ export default function Mensalidades() {
           <DetalheMensalidade
             key={aberta.id}
             mensalidade={aberta}
-            aoPagar={aoPagar}
+            aoConcluir={aoConcluir}
             aoDesatualizar={recarregar}
             aoFechar={() => setClicada(null)}
           />
