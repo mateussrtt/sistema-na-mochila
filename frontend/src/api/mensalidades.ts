@@ -1,4 +1,5 @@
 import type { AlunoResumo, Bolsa } from './cadastros'
+import type { Cancelamento } from './cancelamento'
 import { apiEnviar, apiGet } from './client'
 
 export type SituacaoMensalidade = 'a_vencer' | 'atrasada' | 'paga' | 'isenta' | 'cancelada'
@@ -31,6 +32,9 @@ export type Pagamento = {
   registrado_em: string
 }
 
+/** Pagamento registrado errado e cancelado: continua no histórico, com o motivo (RF17) */
+export type PagamentoCancelado = Pagamento & { cancelamento: Cancelamento }
+
 export type NovoPagamento = {
   data_pagamento: string
   valor_pago: string
@@ -54,6 +58,8 @@ export type Mensalidade = {
   dias_em_atraso: number
   /** Só a mensalidade paga tem pagamento */
   pagamento: Pagamento | null
+  /** Pagamentos cancelados, do mais recente para o mais antigo */
+  pagamentos_cancelados: PagamentoCancelado[]
   /** Só a mensalidade isenta ou cancelada tem motivo, quem alterou e quando (ISO 8601) */
   motivo: string | null
   alterado_por: string | null
@@ -82,6 +88,14 @@ export function listarMensalidades(mes: string, busca: string, signal?: AbortSig
 
 export function registrarPagamento(id: number, pagamento: NovoPagamento) {
   return apiEnviar<Mensalidade>('POST', `/api/mensalidades/${id}/pagamento`, pagamento)
+}
+
+/**
+ * Só o administrador. Cancela o pagamento registrado errado: a mensalidade volta a ficar
+ * pendente e o pagamento continua no histórico, com o motivo (RF17, RN12).
+ */
+export function cancelarPagamento(id: number, motivo: string) {
+  return apiEnviar<Mensalidade>('PATCH', `/api/mensalidades/${id}/pagamento/cancelar`, { motivo })
 }
 
 /** Só o administrador. Só uma mensalidade pendente pode ser isentada (RF14, RN13). */

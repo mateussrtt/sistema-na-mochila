@@ -3,8 +3,11 @@ import { useState } from 'react'
 import {
   NOME_DA_FORMA_COBRANCA,
   NOME_DA_SITUACAO_COBRANCA,
+  cancelarPagamentoDaCobranca,
   type Cobranca,
 } from '../../api/cobrancas'
+import FormMotivo from '../../components/FormMotivo'
+import PagamentosCancelados from '../../components/PagamentosCancelados'
 import { useSessao } from '../../sessao/contexto'
 import {
   formatarData,
@@ -17,7 +20,7 @@ import CancelarCobranca from './CancelarCobranca'
 import FormNota from './FormNota'
 import FormPagamentoCobranca from './FormPagamentoCobranca'
 
-type Tela = 'ver' | 'nota' | 'pagamento' | 'cancelar'
+type Tela = 'ver' | 'nota' | 'pagamento' | 'cancelar' | 'cancelar-pagamento'
 
 type Props = {
   cobranca: Cobranca
@@ -66,6 +69,37 @@ export default function DetalheCobranca({ cobranca, aoConcluir, aoDesatualizar, 
   }
 
   const { nota, pagamento } = cobranca
+  if (tela === 'cancelar-pagamento' && pagamento) {
+    return (
+      <FormMotivo
+        id="cancelar-pagamento-cobranca"
+        resumo={
+          <dl className="dados">
+            <dt>Empresa</dt>
+            <dd>{cobranca.padrinho.nome}</dd>
+            <dt>Mês</dt>
+            <dd>{nomeDoMesComMaiuscula(cobranca.competencia.slice(0, 7))}</dd>
+            <dt>Pagamento</dt>
+            <dd>
+              {formatarMoeda(pagamento.valor_pago)} em {formatarData(pagamento.data_pagamento)} (
+              {NOME_DA_FORMA_COBRANCA[pagamento.forma_pagamento]})
+            </dd>
+          </dl>
+        }
+        legenda="Cancelar o pagamento da empresa"
+        explicacao={`Use quando o pagamento foi registrado errado. A cobrança volta a ficar emitida, com a mesma nota, e ${plural(cobranca.alunos.length, 'mensalidade do aluno volta', 'mensalidades dos alunos voltam')} a ficar em aberto, até você registrar o pagamento certo.`}
+        botao="Cancelar pagamento"
+        fazendo="Cancelando…"
+        enviar={async (motivo) => {
+          await cancelarPagamentoDaCobranca(cobranca.id, motivo)
+          aoConcluir(`Pagamento de ${cobranca.padrinho.nome} cancelado`)
+        }}
+        aoDesatualizar={aoDesatualizar}
+        aoVoltar={voltar}
+      />
+    )
+  }
+
   const aberta = cobranca.status === 'a_emitir' || cobranca.status === 'emitida'
 
   return (
@@ -154,6 +188,11 @@ export default function DetalheCobranca({ cobranca, aoConcluir, aoDesatualizar, 
           </fieldset>
         )}
 
+        <PagamentosCancelados
+          pagamentos={cobranca.pagamentos_cancelados}
+          nomeDaForma={NOME_DA_FORMA_COBRANCA}
+        />
+
         {cobranca.motivo && (
           <fieldset className="grupo">
             <legend>Cancelamento</legend>
@@ -181,6 +220,14 @@ export default function DetalheCobranca({ cobranca, aoConcluir, aoDesatualizar, 
         {aberta && ehAdmin ? (
           <button type="button" className="botao botao-texto" onClick={() => setTela('cancelar')}>
             Cancelar cobrança…
+          </button>
+        ) : cobranca.status === 'paga' && ehAdmin ? (
+          <button
+            type="button"
+            className="botao botao-texto"
+            onClick={() => setTela('cancelar-pagamento')}
+          >
+            Cancelar pagamento…
           </button>
         ) : (
           <span />

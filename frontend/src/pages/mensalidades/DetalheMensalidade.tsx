@@ -4,11 +4,14 @@ import { ApiError } from '../../api/client'
 import {
   NOME_DA_FORMA,
   NOME_DA_SITUACAO,
+  cancelarPagamento,
   registrarPagamento,
   type FormaDePagamento,
   type Mensalidade,
 } from '../../api/mensalidades'
 import Campo from '../../components/Campo'
+import FormMotivo from '../../components/FormMotivo'
+import PagamentosCancelados from '../../components/PagamentosCancelados'
 import { useSessao } from '../../sessao/contexto'
 import { ligacaoDoCampo } from '../../utils/campo'
 import {
@@ -47,7 +50,10 @@ function erroDoValor(texto: string): string | undefined {
   if (valor >= 100_000_000) return 'O valor pago é alto demais.'
 }
 
-/** Dados da mensalidade. Pendente: registra o pagamento. Paga: mostra o que foi registrado. */
+/**
+ * Dados da mensalidade. Pendente: registra o pagamento. Paga: mostra o que foi registrado, e o
+ * administrador pode cancelar um pagamento registrado errado (RF17).
+ */
 export default function DetalheMensalidade({
   mensalidade,
   aoConcluir,
@@ -56,6 +62,7 @@ export default function DetalheMensalidade({
 }: Props) {
   const { podeEditar, ehAdmin } = useSessao()
   const [alterando, setAlterando] = useState(false)
+  const [cancelandoPagamento, setCancelandoPagamento] = useState(false)
   const [data, setData] = useState(hojeIso())
   const [valor, setValor] = useState(mensalidade.valor.replace('.', ','))
   const [forma, setForma] = useState<FormaDePagamento | null>(null)
@@ -69,6 +76,8 @@ export default function DetalheMensalidade({
   // Só o administrador isenta ou cancela, e só enquanto a mensalidade está pendente
   const alteravel = pendente && ehAdmin
   const pagamento = mensalidade.pagamento
+  // Pagamento registrado errado: só o administrador cancela, e a mensalidade volta a ficar pendente
+  const pagamentoCancelavel = pagamento !== null && mensalidade.status === 'paga' && ehAdmin
 
   const valorLido = lerValor(valor.trim())
   const diferente = valorLido !== null && emCentavos(valorLido) !== emCentavos(mensalidade.valor)
@@ -136,6 +145,37 @@ export default function DetalheMensalidade({
     )
   }
 
+  if (cancelandoPagamento && pagamento) {
+    return (
+      <FormMotivo
+        id="cancelar-pagamento"
+        resumo={
+          <dl className="dados">
+            <dt>Aluno</dt>
+            <dd>{mensalidade.aluno.nome}</dd>
+            <dt>Mês</dt>
+            <dd className="primeira-maiuscula">{nomeDoMes(mensalidade.competencia.slice(0, 7))}</dd>
+            <dt>Pagamento</dt>
+            <dd>
+              {formatarMoeda(pagamento.valor_pago)} em {formatarData(pagamento.data_pagamento)} (
+              {NOME_DA_FORMA[pagamento.forma_pagamento]})
+            </dd>
+          </dl>
+        }
+        legenda="Cancelar o pagamento"
+        explicacao="Use quando o pagamento foi registrado errado: valor, data, forma ou aluno. A mensalidade volta a ficar pendente, para você registrar o pagamento certo."
+        botao="Cancelar pagamento"
+        fazendo="Cancelando…"
+        enviar={async (motivo) => {
+          await cancelarPagamento(mensalidade.id, motivo)
+          aoConcluir(`Pagamento de ${mensalidade.aluno.nome} cancelado`)
+        }}
+        aoDesatualizar={aoDesatualizar}
+        aoVoltar={() => setCancelandoPagamento(false)}
+      />
+    )
+  }
+
   return (
     <form className="gaveta-formulario" noValidate onSubmit={(e) => void aoEnviar(e)}>
       <div className="gaveta-conteudo">
@@ -179,6 +219,11 @@ export default function DetalheMensalidade({
             </dl>
           </fieldset>
         )}
+
+        <PagamentosCancelados
+          pagamentos={mensalidade.pagamentos_cancelados}
+          nomeDaForma={NOME_DA_FORMA}
+        />
 
         {mensalidade.motivo && (
           <fieldset className="grupo">
@@ -285,6 +330,14 @@ export default function DetalheMensalidade({
         {alteravel ? (
           <button type="button" className="botao botao-texto" onClick={() => setAlterando(true)}>
             Isentar ou cancelar…
+          </button>
+        ) : pagamentoCancelavel ? (
+          <button
+            type="button"
+            className="botao botao-texto"
+            onClick={() => setCancelandoPagamento(true)}
+          >
+            Cancelar pagamento…
           </button>
         ) : (
           <span />

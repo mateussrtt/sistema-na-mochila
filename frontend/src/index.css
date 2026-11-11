@@ -2268,3 +2268,44 @@ fieldset.gaveta-conteudo {
 .linha-titulo-quebra .etiqueta {
   white-space: nowrap;
 }
+
+/* ===== Lançamento cancelado (RF17): continua na lista, apagado, e fora dos totais ===== */
+.linha-cancelada .linha-titulo,
+.linha-cancelada .linha-detalhes,
+.linha-cancelada .monograma {
+  opacity: 0.6;
+}
+
+.linha-cancelada .linha-valor {
+  color: var(--tinta-suave);
+  text-decoration: line-through;
+}
+
+.etiqueta-lancamento-cancelado {
+  background: var(--erro-suave);
+  color: var(--erro);
+}
+
+.cancelados {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cancelados li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--realce);
+  font-size: 13.5px;
+  color: var(--tinta-suave);
+}
+
+.cancelados-valor {
+  color: var(--tinta);
+}

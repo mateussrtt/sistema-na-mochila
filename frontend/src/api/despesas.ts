@@ -1,4 +1,5 @@
 import type { Situacao } from './cadastros'
+import type { Cancelamento } from './cancelamento'
 import { apiEnviar, apiGet } from './client'
 
 /** Para onde o dinheiro vai: kits, viagens, custos fixos... */
@@ -27,6 +28,12 @@ export type Despesa = {
   registrado_por: string
   /** Data e hora do registro, em ISO 8601 */
   registrado_em: string
+  /** Lançamento cancelado continua na lista, com o motivo, mas não entra nos totais */
+  cancelamento: Cancelamento | null
+  /** Esta despesa é a correção de outra, que foi cancelada */
+  substitui_id: number | null
+  /** Esta despesa foi cancelada e corrigida por outra */
+  substituida_por_id: number | null
 }
 
 export type NovaDespesa = {
@@ -51,6 +58,19 @@ export function listarDespesas(
 
 export function registrarDespesa(dados: NovaDespesa) {
   return apiEnviar<Despesa>('POST', '/api/despesas', dados)
+}
+
+/** Só o administrador. A despesa continua na lista, marcada como cancelada (RF17, RN12). */
+export function cancelarDespesa(id: number, motivo: string) {
+  return apiEnviar<Despesa>('PATCH', `/api/despesas/${id}/cancelar`, { motivo })
+}
+
+/**
+ * Só o administrador. Cancela a despesa errada com o motivo e registra a certa no lugar, tudo
+ * de uma vez. Devolve a despesa nova.
+ */
+export function corrigirDespesa(id: number, dados: NovaDespesa & { motivo: string }) {
+  return apiEnviar<Despesa>('POST', `/api/despesas/${id}/corrigir`, dados)
 }
 
 export function listarCategoriasDespesa(situacao: Situacao, signal?: AbortSignal) {

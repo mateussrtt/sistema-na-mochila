@@ -1,10 +1,16 @@
 import { useState, type FormEvent } from 'react'
 
 import { ApiError } from '../../api/client'
-import { registrarReceita, type CategoriaReceita } from '../../api/receitas'
+import {
+  corrigirReceita,
+  registrarReceita,
+  type CategoriaReceita,
+  type Receita,
+} from '../../api/receitas'
 import Campo from '../../components/Campo'
 import { ligacaoDoCampo } from '../../utils/campo'
 import { formatarMoeda, hojeIso, lerValor } from '../../utils/formato'
+import { DICA_DO_MOTIVO, MOTIVO_MAXIMO, erroDoMotivo } from '../../utils/motivo'
 
 type Props = {
   /** Só as categorias ativas: uma inativa não recebe receitas novas */
@@ -12,13 +18,21 @@ type Props = {
   /** Chamado depois de registrar, com a mensagem de confirmação e a data lançada */
   aoSalvar: (mensagem: string, data: string) => void
   aoCancelar: () => void
-  aoCadastrarCategoria: () => void
+  /** Só no registro: na correção, o botão de categorias não aparece */
+  aoCadastrarCategoria?: () => void
   /** Categoria já escolhida na tela (filtro), para poupar um clique */
   categoriaInicial?: number | null
+  /**
+   * Receita lançada errada que este formulário corrige (só o administrador). Os campos já vêm
+   * preenchidos com os dados dela, e o motivo é obrigatório (RF17).
+   */
+  corrigindo?: Receita
+  /** A API disse que a receita mudou (ex.: outra pessoa já cancelou): recarrega a lista */
+  aoDesatualizar?: () => void
 }
 
 type Erros = Partial<
-  Record<'data' | 'valor' | 'categoria' | 'descricao' | 'origem' | 'geral', string>
+  Record<'data' | 'valor' | 'categoria' | 'descricao' | 'origem' | 'motivo' | 'geral', string>
 >
 
 const PRIMEIRA_DATA = '2000-01-01'
@@ -48,15 +62,20 @@ export default function FormReceita({
   aoCancelar,
   aoCadastrarCategoria,
   categoriaInicial = null,
+  corrigindo,
+  aoDesatualizar,
 }: Props) {
-  const [data, setData] = useState(hojeIso())
-  const [valor, setValor] = useState('')
+  const [data, setData] = useState(corrigindo?.data_receita ?? hojeIso())
+  const [valor, setValor] = useState(corrigindo?.valor.replace('.', ',') ?? '')
   // Nenhuma categoria vem escolhida (RN08): quem lança precisa decidir de onde o dinheiro veio
+  // Na correção, a categoria da errada já vem escolhida, se ainda estiver ativa
+  const inicial = corrigindo ? corrigindo.categoria.id : categoriaInicial
   const [categoria, setCategoria] = useState(
-    categorias.some((c) => c.id === categoriaInicial) ? String(categoriaInicial) : '',
+    categorias.some((c) => c.id === inicial) ? String(inicial) : '',
   )
-  const [descricao, setDescricao] = useState('')
-  const [origem, setOrigem] = useState('')
+  const [descricao, setDescricao] = useState(corrigindo?.descricao ?? '')
+  const [origem, setOrigem] = useState(corrigindo?.origem ?? '')
+  const [motivo, setMotivo] = useState('')
   const [tentou, setTentou] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [erroApi, setErroApi] = useState<Erros>({})
@@ -83,6 +102,10 @@ export default function FormReceita({
     } else if (textoDescricao.length > DESCRICAO_MAXIMA) {
       erros.descricao = `Use no máximo ${DESCRICAO_MAXIMA} caracteres.`
     }
+    if (corrigindo) {
+      const erroMotivo = erroDoMotivo(motivo)
+      if (erroMotivo) erros.motivo = erroMotivo
+    }
     return erros
   }
 
@@ -96,14 +119,20 @@ export default function FormReceita({
 
     setSalvando(true)
     try {
-      const criada = await registrarReceita({
+      const dados = {
         data_receita: data,
         valor: valor.trim().replace(',', '.'),
         categoria_id: Number(categoria),
         origem: limpo(origem),
         descricao: limpo(descricao) || null,
-      })
-      aoSalvar(`Receita de ${formatarMoeda(criada.valor)} registrada`, criada.data_receita)
+      }
+      const criada = corrigindo
+        ? await corrigirReceita(corrigindo.id, { ...dados, motivo: motivo.trim() })
+        : await registrarReceita(dados)
+      aoSalvar(
+        `Receita de ${formatarMoeda(criada.valor)} ${corrigindo ? 'corrigida' : 'registrada'}`,
+        criada.data_receita,
+      )
     } catch (erro) {
       const api = erro instanceof ApiError ? erro : null
       const campos = api?.campos ?? {}
@@ -113,11 +142,14 @@ export default function FormReceita({
       if (campos.categoria_id) doServidor.categoria = campos.categoria_id
       if (campos.descricao) doServidor.descricao = campos.descricao
       if (campos.origem) doServidor.origem = campos.origem
+      if (campos.motivo) doServidor.motivo = campos.motivo
       if (Object.keys(doServidor).length === 0) {
         // Categoria inativada por outra pessoa enquanto o formulário estava aberto (422 sem campo)
         if (api?.status === 422) doServidor.categoria = api.message
-        else doServidor.geral = api?.message ?? 'Não foi possível registrar. Tente de novo.'
+        else doServidor.geral = api?.message ?? 'Não foi possível salvar. Tente de novo.'
       }
+      // Outra pessoa já cancelou ou corrigiu esta receita enquanto o formulário estava aberto
+      if (api?.status === 409) aoDesatualizar?.()
       setErroApi(doServidor)
     } finally {
       setSalvando(false)
@@ -199,10 +231,19 @@ export default function FormReceita({
           />
         </Campo>
 
-        <p className="nota">
-          Mensalidades e pagamentos das empresas padrinhas entram pelas telas próprias, não aqui.
-          Depois de registrada, a receita não pode ser apagada.
-        </p>
+        {corrigindo ? (
+          <CampoDoMotivo
+            id="receita-motivo"
+            erro={erros.motivo}
+            valor={motivo}
+            aoMudar={setMotivo}
+          />
+        ) : (
+          <p className="nota">
+            Mensalidades e pagamentos das empresas padrinhas entram pelas telas próprias, não aqui.
+            Depois de registrada, a receita não pode ser apagada.
+          </p>
+        )}
 
         {erros.geral && (
           <p className="erro-geral" role="alert">
@@ -212,22 +253,59 @@ export default function FormReceita({
       </div>
 
       <footer className="gaveta-rodape">
-        <button type="button" className="botao botao-texto" onClick={aoCadastrarCategoria}>
-          {semCategorias ? 'Cadastrar categoria' : 'Categorias…'}
-        </button>
+        {aoCadastrarCategoria ? (
+          <button type="button" className="botao botao-texto" onClick={aoCadastrarCategoria}>
+            {semCategorias ? 'Cadastrar categoria' : 'Categorias…'}
+          </button>
+        ) : (
+          <span />
+        )}
         <div className="gaveta-rodape-acoes">
           <button type="button" className="botao botao-texto" onClick={aoCancelar}>
-            Cancelar
+            {corrigindo ? 'Voltar' : 'Cancelar'}
           </button>
           <button
             type="submit"
             className="botao botao-principal"
             disabled={salvando || semCategorias}
           >
-            {salvando ? 'Registrando…' : 'Registrar receita'}
+            {corrigindo
+              ? salvando
+                ? 'Salvando…'
+                : 'Salvar correção'
+              : salvando
+                ? 'Registrando…'
+                : 'Registrar receita'}
           </button>
         </div>
       </footer>
     </form>
+  )
+}
+
+type CampoDoMotivoProps = {
+  id: string
+  erro?: string
+  valor: string
+  aoMudar: (valor: string) => void
+}
+
+/** Motivo da correção: a receita errada é cancelada com ele e continua no histórico */
+function CampoDoMotivo({ id, erro, valor, aoMudar }: CampoDoMotivoProps) {
+  return (
+    <>
+      <Campo id={id} rotulo="Motivo da correção" erro={erro} dica={DICA_DO_MOTIVO}>
+        <input
+          {...ligacaoDoCampo(id, erro, DICA_DO_MOTIVO)}
+          autoComplete="off"
+          maxLength={MOTIVO_MAXIMO}
+          value={valor}
+          onChange={(e) => aoMudar(e.target.value)}
+        />
+      </Campo>
+      <p className="aviso-valor" role="note">
+        A receita errada não é apagada: fica cancelada, com o motivo, e esta entra no lugar dela.
+      </p>
+    </>
   )
 }

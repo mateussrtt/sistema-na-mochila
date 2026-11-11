@@ -1,4 +1,5 @@
 import type { AlunoResumo } from './cadastros'
+import type { Cancelamento } from './cancelamento'
 import { apiEnviar, apiGet } from './client'
 
 export type StatusCobranca = 'a_emitir' | 'emitida' | 'paga' | 'cancelada'
@@ -47,6 +48,8 @@ export type PagamentoDaCobranca = {
   registrado_em: string
 }
 
+export type PagamentoDaCobrancaCancelado = PagamentoDaCobranca & { cancelamento: Cancelamento }
+
 export type Cobranca = {
   id: number
   padrinho: { id: number; nome: string; ativo: boolean }
@@ -67,6 +70,8 @@ export type Cobranca = {
   gerada_em: string
   nota: Nota | null
   pagamento: PagamentoDaCobranca | null
+  /** Pagamentos cancelados, do mais recente para o mais antigo */
+  pagamentos_cancelados: PagamentoDaCobrancaCancelado[]
   motivo: string | null
   cancelada_por: string | null
   cancelada_em: string | null
@@ -99,6 +104,14 @@ export function registrarNota(id: number, nota: NovaNota) {
 
 export function registrarPagamentoDaCobranca(id: number, pagamento: NovoPagamentoDaCobranca) {
   return apiEnviar<Cobranca>('POST', `/api/cobrancas/${id}/pagamento`, pagamento)
+}
+
+/**
+ * Só o administrador. Cancela o pagamento registrado errado: a cobrança volta a ficar emitida,
+ * com a mesma nota, e as mensalidades dos alunos voltam a ficar pendentes (RF17, RN12).
+ */
+export function cancelarPagamentoDaCobranca(id: number, motivo: string) {
+  return apiEnviar<Cobranca>('PATCH', `/api/cobrancas/${id}/pagamento/cancelar`, { motivo })
 }
 
 /** Só o administrador (RN13). A cobrança continua na lista, com o motivo (RN12). */
