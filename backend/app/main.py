@@ -9,6 +9,7 @@ from app.routers import (
     alunos,
     auth,
     categorias_despesa,
+    categorias_receita,
     cobrancas,
     despesas,
     health,
@@ -16,6 +17,7 @@ from app.routers import (
     mensalidades,
     padrinhos,
     pendencias,
+    receitas,
     responsaveis,
     usuarios,
 )
@@ -57,6 +59,8 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(categorias_despesa.router, prefix="/api")
 app.include_router(cobrancas.router, prefix="/api")
 app.include_router(despesas.router, prefix="/api")
+app.include_router(categorias_receita.router, prefix="/api")
+app.include_router(receitas.router, prefix="/api")
 app.include_router(alunos.router, prefix="/api")
 app.include_router(responsaveis.router, prefix="/api")
 app.include_router(matriculas.router, prefix="/api")
