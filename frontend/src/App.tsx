@@ -14,6 +14,7 @@ import Despesas from './pages/despesas/Despesas'
 import Mensalidades from './pages/mensalidades/Mensalidades'
 import NaoEncontrada from './pages/NaoEncontrada'
 import Pendencias from './pages/pendencias/Pendencias'
+import Receitas from './pages/receitas/Receitas'
 import Usuarios from './pages/usuarios/Usuarios'
 import RotaProtegida from './sessao/RotaProtegida'
 
@@ -34,7 +35,7 @@ export default function App() {
           <Route path="pendencias" element={<Pendencias />} />
           <Route path="cobrancas" element={<Cobrancas />} />
           <Route path="despesas" element={<Despesas />} />
-          <Route path="receitas" element={<EmConstrucao titulo="Receitas e patrocínios" />} />
+          <Route path="receitas" element={<Receitas />} />
           <Route path="caixa" element={<EmConstrucao titulo="Saldo e fluxo de caixa" />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="*" element={<NaoEncontrada />} />

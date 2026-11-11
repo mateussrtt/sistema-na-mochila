@@ -28,6 +28,7 @@ from app.models.mensalidade import (
 )
 from app.models.padrinho import Padrinho
 from app.models.pagamento import FormaDePagamento, Pagamento
+from app.models.receita import CategoriaReceita, Receita
 from app.models.responsavel import Responsavel
 from app.models.usuario import Perfil, Usuario
 
@@ -37,6 +38,7 @@ __all__ = [
     "Base",
     "Bolsa",
     "CategoriaDespesa",
+    "CategoriaReceita",
     "Cobranca",
     "Despesa",
     "FormaDePagamento",
@@ -47,6 +49,7 @@ __all__ = [
     "Pagamento",
     "PagamentoCobranca",
     "Perfil",
+    "Receita",
     "Responsavel",
     "SituacaoCobranca",
     "SituacaoMatricula",
