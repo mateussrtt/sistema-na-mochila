@@ -8,7 +8,9 @@ from app.core.config import get_settings
 from app.routers import (
     alunos,
     auth,
+    categorias_despesa,
     cobrancas,
+    despesas,
     health,
     matriculas,
     mensalidades,
@@ -52,7 +54,9 @@ async def erro_de_validacao(_: Request, erro: RequestValidationError) -> JSONRes
 # Todas as rotas ficam sob /api
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(categorias_despesa.router, prefix="/api")
 app.include_router(cobrancas.router, prefix="/api")
+app.include_router(despesas.router, prefix="/api")
 app.include_router(alunos.router, prefix="/api")
 app.include_router(responsaveis.router, prefix="/api")
 app.include_router(matriculas.router, prefix="/api")

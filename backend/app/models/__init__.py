@@ -15,6 +15,7 @@ from app.models.cobranca import (
     emissao_atrasada,
     situacao_da_cobranca,
 )
+from app.models.despesa import CategoriaDespesa, Despesa
 from app.models.matricula import Bolsa, Matricula, SituacaoMatricula
 from app.models.mensalidade import (
     DIA_DO_VENCIMENTO,
@@ -35,7 +36,9 @@ __all__ = [
     "Aluno",
     "Base",
     "Bolsa",
+    "CategoriaDespesa",
     "Cobranca",
+    "Despesa",
     "FormaDePagamento",
     "FormaDePagamentoCobranca",
     "Matricula",
