@@ -661,6 +661,7 @@ def test_resposta_traz_so_o_necessario(api, matricula):
         "motivo",
         "alterado_por",
         "alterado_em",
+        "pagamentos_cancelados",
     }
     assert mensalidade["pagamento"] is None  # só a mensalidade paga tem pagamento
     # E só a isenta ou cancelada tem motivo, quem alterou e quando

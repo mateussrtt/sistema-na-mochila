@@ -7,7 +7,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
-from app.core import tempo
+from app.core import lancamentos, tempo
 from app.core.acesso import LOGADO, PODE_EDITAR, SO_ADMIN, UsuarioLogado
 from app.db.session import get_db
 from app.models import (
@@ -22,12 +22,14 @@ from app.models import (
     situacao_da_cobranca,
 )
 from app.routers.mensalidades import mes_do_filtro
+from app.schemas.cancelamento import cancelamento_de
 from app.schemas.cobranca import (
     CobrancaLeitura,
     ItemDaCobranca,
     NotaEntrada,
     NotaLeitura,
     PadrinhoDaCobranca,
+    PagamentoDaCobrancaCanceladoLeitura,
     PagamentoDaCobrancaEntrada,
     PagamentoDaCobrancaLeitura,
 )
@@ -81,8 +83,39 @@ def pagamentos_ativos(db: Session, cobrancas: list[Cobranca]) -> dict[int, Pagam
     return {p.cobranca_id: p for p in pagamentos}
 
 
+def pagamentos_cancelados(db: Session, ids: list[int]) -> dict[int, list[PagamentoCobranca]]:
+    """Os pagamentos cancelados de cada cobrança, do mais recente para o mais antigo (RF17)."""
+    if not ids:
+        return {}
+    cancelados: dict[int, list[PagamentoCobranca]] = {}
+    for pagamento in db.scalars(
+        select(PagamentoCobranca)
+        .where(PagamentoCobranca.cobranca_id.in_(ids), PagamentoCobranca.cancelado_em.is_not(None))
+        .options(
+            joinedload(PagamentoCobranca.criado_por), joinedload(PagamentoCobranca.cancelado_por)
+        )
+        .order_by(PagamentoCobranca.cancelado_em.desc(), PagamentoCobranca.id.desc())
+    ):
+        cancelados.setdefault(pagamento.cobranca_id, []).append(pagamento)
+    return cancelados
+
+
+def pagamento_para_leitura(pagamento: PagamentoCobranca) -> PagamentoDaCobrancaLeitura:
+    return PagamentoDaCobrancaLeitura(
+        data_pagamento=pagamento.data_pagamento,
+        valor_pago=pagamento.valor_pago,
+        forma_pagamento=pagamento.forma_pagamento,
+        observacao=pagamento.observacao,
+        registrado_por=pagamento.criado_por.nome,
+        registrado_em=pagamento.criado_em,
+    )
+
+
 def para_leitura(
-    cobranca: Cobranca, hoje: date, pagamento: PagamentoCobranca | None = None
+    cobranca: Cobranca,
+    hoje: date,
+    pagamento: PagamentoCobranca | None = None,
+    cancelados: list[PagamentoCobranca] | None = None,
 ) -> CobrancaLeitura:
     situacao = situacao_da_cobranca(cobranca.status, cobranca.data_vencimento, hoje)
     atrasada = situacao == "atrasada"
@@ -124,18 +157,13 @@ def para_leitura(
             if cobranca.numero_nota is not None
             else None
         ),
-        pagamento=(
-            PagamentoDaCobrancaLeitura(
-                data_pagamento=pagamento.data_pagamento,
-                valor_pago=pagamento.valor_pago,
-                forma_pagamento=pagamento.forma_pagamento,
-                observacao=pagamento.observacao,
-                registrado_por=pagamento.criado_por.nome,
-                registrado_em=pagamento.criado_em,
+        pagamento=pagamento_para_leitura(pagamento) if pagamento else None,
+        pagamentos_cancelados=[
+            PagamentoDaCobrancaCanceladoLeitura(
+                **pagamento_para_leitura(c).model_dump(), cancelamento=cancelamento_de(c)
             )
-            if pagamento
-            else None
-        ),
+            for c in cancelados or []
+        ],
         motivo=cobranca.motivo_cancelamento,
         cancelada_por=cobranca.cancelado_por.nome if cobranca.cancelado_por else None,
         cancelada_em=cobranca.cancelado_em,
@@ -145,7 +173,12 @@ def para_leitura(
 def resposta(db: Session, cobranca_id: int) -> CobrancaLeitura:
     """A cobrança como está no banco agora, para devolver depois de uma alteração."""
     cobranca = carregar(db, select(Cobranca).where(Cobranca.id == cobranca_id))[0]
-    return para_leitura(cobranca, tempo.hoje(), pagamentos_ativos(db, [cobranca]).get(cobranca_id))
+    return para_leitura(
+        cobranca,
+        tempo.hoje(),
+        pagamentos_ativos(db, [cobranca]).get(cobranca_id),
+        pagamentos_cancelados(db, [cobranca_id]).get(cobranca_id),
+    )
 
 
 @router.get("", response_model=list[CobrancaLeitura])
@@ -182,7 +215,8 @@ def listar(
 
     cobrancas = carregar(db, consulta)
     pagamentos = pagamentos_ativos(db, cobrancas)
-    return [para_leitura(c, hoje, pagamentos.get(c.id)) for c in cobrancas]
+    cancelados = pagamentos_cancelados(db, [c.id for c in cobrancas])
+    return [para_leitura(c, hoje, pagamentos.get(c.id), cancelados.get(c.id)) for c in cobrancas]
 
 
 @router.get("/{cobranca_id}", response_model=CobrancaLeitura)
@@ -367,6 +401,41 @@ def cancelar(
             alterado_por_id=usuario.id,
             alterado_em=func.now(),
         )
+    )
+    db.commit()
+    return resposta(db, cobranca_id)
+
+
+@router.patch(
+    "/{cobranca_id}/pagamento/cancelar", response_model=CobrancaLeitura, dependencies=[SO_ADMIN]
+)
+def cancelar_pagamento(
+    cobranca_id: IdDaCobranca, dados: MotivoEntrada, db: Banco, usuario: UsuarioLogado
+) -> CobrancaLeitura:
+    """Cancela o pagamento da empresa lançado errado (RF17).
+
+    A cobrança volta a ficar emitida, esperando pagamento, e as mensalidades dos alunos dela
+    deixam de estar quitadas. O pagamento não é apagado (RN12): fica no histórico da cobrança,
+    com o motivo. Para corrigir, basta registrar o pagamento certo depois.
+    """
+    cobranca = travar(db, cobranca_id)
+    pagamento = db.scalar(
+        select(PagamentoCobranca).where(
+            PagamentoCobranca.cobranca_id == cobranca.id, PagamentoCobranca.cancelado_em.is_(None)
+        )
+    )
+    if cobranca.status != StatusCobranca.PAGA or pagamento is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Esta cobrança não tem pagamento para cancelar"
+        )
+
+    lancamentos.marcar_cancelado(pagamento, dados.motivo, usuario)
+    cobranca.status = StatusCobranca.EMITIDA
+    # O pagamento da empresa quitou as mensalidades pendentes; agora elas voltam a pendentes
+    db.execute(
+        update(Mensalidade)
+        .where(Mensalidade.cobranca_id == cobranca.id, Mensalidade.status == StatusMensalidade.PAGA)
+        .values(status=StatusMensalidade.PENDENTE)
     )
     db.commit()
     return resposta(db, cobranca_id)

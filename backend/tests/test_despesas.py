@@ -93,6 +93,9 @@ def test_registra_uma_despesa(api, db, kits):
         "favorecido": "Loja Robótica Ltda",
         "registrado_por": eu["nome"],
         "registrado_em": "",
+        "cancelamento": None,
+        "substitui_id": None,
+        "substituida_por_id": None,
     }
     assert len(no_banco(db)) == 1
 
@@ -609,6 +612,9 @@ def test_a_resposta_traz_o_necessario_para_a_tela(api, kits):
         "favorecido",
         "registrado_por",
         "registrado_em",
+        "cancelamento",
+        "substitui_id",
+        "substituida_por_id",
     }
 
 

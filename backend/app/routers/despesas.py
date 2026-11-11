@@ -1,23 +1,32 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.acesso import LOGADO, PODE_EDITAR, UsuarioLogado
+from app.core import lancamentos
+from app.core.acesso import LOGADO, PODE_EDITAR, SO_ADMIN, UsuarioLogado
 from app.db.session import get_db
 from app.models import CategoriaDespesa, Despesa
 from app.routers.mensalidades import mes_do_filtro
+from app.schemas.cancelamento import cancelamento_de
 from app.schemas.comum import ID_MAXIMO, termo_de_busca
-from app.schemas.despesa import CategoriaDespesaLeitura, DespesaEntrada, DespesaLeitura
+from app.schemas.despesa import (
+    CategoriaDespesaLeitura,
+    DespesaCorrecao,
+    DespesaEntrada,
+    DespesaLeitura,
+)
+from app.schemas.mensalidade import MotivoEntrada
 
-# Todas as rotas exigem login. Registrar despesa exige perfil de operador ou administrador
+# Todas as rotas exigem login. Registrar despesa exige perfil de operador ou administrador;
+# cancelar e corrigir, só administrador (RN13)
 router = APIRouter(prefix="/despesas", tags=["despesas"], dependencies=[LOGADO])
 
 Banco = Annotated[Session, Depends(get_db)]
 
 
-def para_leitura(despesa: Despesa) -> DespesaLeitura:
+def para_leitura(despesa: Despesa, substituida_por_id: int | None = None) -> DespesaLeitura:
     return DespesaLeitura(
         id=despesa.id,
         data_despesa=despesa.data_despesa,
@@ -27,6 +36,9 @@ def para_leitura(despesa: Despesa) -> DespesaLeitura:
         favorecido=despesa.favorecido,
         registrado_por=despesa.criado_por.nome,
         registrado_em=despesa.criado_em,
+        cancelamento=cancelamento_de(despesa),
+        substitui_id=despesa.substitui_id,
+        substituida_por_id=substituida_por_id,
     )
 
 
@@ -65,7 +77,11 @@ def listar(
     """
     consulta = (
         select(Despesa)
-        .options(joinedload(Despesa.categoria), joinedload(Despesa.criado_por))
+        .options(
+            joinedload(Despesa.categoria),
+            joinedload(Despesa.criado_por),
+            joinedload(Despesa.cancelado_por),
+        )
         .order_by(Despesa.data_despesa.desc(), Despesa.id.desc())
     )
     primeiro_dia = mes_do_filtro(mes)
@@ -87,7 +103,9 @@ def listar(
             Despesa.descricao.icontains(termo, autoescape=True)
             | Despesa.favorecido.icontains(termo, autoescape=True)
         )
-    return [para_leitura(d) for d in db.scalars(consulta)]
+    lista = list(db.scalars(consulta))
+    corrigidas = lancamentos.substitutos(db, Despesa, [d.id for d in lista])
+    return [para_leitura(d, corrigidas.get(d.id)) for d in lista]
 
 
 @router.post(
@@ -114,3 +132,62 @@ def registrar(dados: DespesaEntrada, db: Banco, usuario: UsuarioLogado) -> Despe
     db.add(despesa)
     db.commit()
     return para_leitura(despesa)
+
+
+NAO_ENCONTRADA = "Despesa não encontrada"
+JA_CANCELADA = "Esta despesa já está cancelada"
+
+
+@router.patch("/{despesa_id}/cancelar", response_model=DespesaLeitura, dependencies=[SO_ADMIN])
+def cancelar(
+    despesa_id: Annotated[int, Path(gt=0, le=ID_MAXIMO)],
+    dados: MotivoEntrada,
+    db: Banco,
+    usuario: UsuarioLogado,
+) -> DespesaLeitura:
+    """Cancela a despesa lançada errada, com o motivo (RF17). Nada é apagado (RN12): ela continua
+    na lista, marcada como cancelada, e sai dos totais.
+    """
+    despesa = lancamentos.travar(db, Despesa, despesa_id, NAO_ENCONTRADA)
+    if despesa.cancelado_em is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, JA_CANCELADA)
+    lancamentos.marcar_cancelado(despesa, dados.motivo, usuario)
+    db.commit()
+    db.refresh(despesa)
+    return para_leitura(despesa, lancamentos.substitutos(db, Despesa, [despesa.id]).get(despesa.id))
+
+
+@router.post(
+    "/{despesa_id}/corrigir",
+    response_model=DespesaLeitura,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[SO_ADMIN],
+)
+def corrigir(
+    despesa_id: Annotated[int, Path(gt=0, le=ID_MAXIMO)],
+    dados: DespesaCorrecao,
+    db: Banco,
+    usuario: UsuarioLogado,
+) -> DespesaLeitura:
+    """Corrige uma despesa: cancela a errada com o motivo e registra a certa no lugar (RF17).
+
+    As duas coisas acontecem juntas: ou as duas, ou nenhuma. A nova despesa aponta para a que ela
+    substitui, e quem corrigiu fica registrado nas duas (RF26).
+    """
+    errada = lancamentos.travar(db, Despesa, despesa_id, NAO_ENCONTRADA)
+    if errada.cancelado_em is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, JA_CANCELADA)
+    categoria = busca_categoria_ativa(db, dados.categoria_id)
+    certa = Despesa(
+        data_despesa=dados.data_despesa,
+        valor=dados.valor,
+        categoria_id=categoria.id,
+        descricao=dados.descricao,
+        favorecido=dados.favorecido,
+        criado_por_id=usuario.id,
+        substitui_id=errada.id,
+    )
+    lancamentos.marcar_cancelado(errada, dados.motivo, usuario)
+    db.add(certa)
+    db.commit()
+    return para_leitura(certa)

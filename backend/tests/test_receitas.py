@@ -93,6 +93,9 @@ def test_registra_uma_receita(api, db, kits):
         "origem": "Mineração Vale Verde",
         "registrado_por": eu["nome"],
         "registrado_em": "",
+        "cancelamento": None,
+        "substitui_id": None,
+        "substituida_por_id": None,
     }
     assert len(no_banco(db)) == 1
 
@@ -627,6 +630,9 @@ def test_a_resposta_traz_o_necessario_para_a_tela(api, kits):
         "origem",
         "registrado_por",
         "registrado_em",
+        "cancelamento",
+        "substitui_id",
+        "substituida_por_id",
     }
 
 

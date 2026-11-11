@@ -31,8 +31,8 @@ class FormaDePagamento(enum.StrEnum):
 class Pagamento(Base):
     __tablename__ = "pagamentos"
     __table_args__ = (
-        # Uma mensalidade só aceita um pagamento ativo (RF10). Um pagamento cancelado, no futuro
-        # (RF17), deixa de contar e a mensalidade pode receber outro
+        # Uma mensalidade só aceita um pagamento ativo (RF10). Um pagamento cancelado (RF17)
+        # deixa de contar e a mensalidade pode receber outro
         Index(
             "uq_pagamentos_mensalidade_ativo",
             "mensalidade_id",
@@ -41,6 +41,13 @@ class Pagamento(Base):
         ),
         # RN09: todo lançamento tem valor maior que zero
         CheckConstraint("valor_pago > 0", name="valor_positivo"),
+        # Cancelar exige o motivo, quem fez e quando, tudo junto (RF17, RF26, RN12)
+        CheckConstraint(
+            "(cancelado_em IS NULL AND motivo_cancelamento IS NULL AND cancelado_por_id IS NULL)"
+            " OR (cancelado_em IS NOT NULL AND motivo_cancelamento IS NOT NULL"
+            " AND cancelado_por_id IS NOT NULL)",
+            name="cancelamento_completo",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -63,7 +70,10 @@ class Pagamento(Base):
     # Quem registrou e quando (RF26)
     criado_por_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    # Preenchido só quando o administrador cancelar o pagamento (RF17, issue futura)
+    # Preenchidos só quando o administrador cancela o lançamento (RF17). Nada é apagado (RN12)
     cancelado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    motivo_cancelamento: Mapped[str | None] = mapped_column(String(255))
+    cancelado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
 
-    criado_por: Mapped[Usuario] = relationship()
+    criado_por: Mapped[Usuario] = relationship(foreign_keys=[criado_por_id])
+    cancelado_por: Mapped[Usuario | None] = relationship(foreign_keys=[cancelado_por_id])

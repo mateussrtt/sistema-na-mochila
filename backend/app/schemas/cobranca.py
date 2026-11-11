@@ -5,6 +5,7 @@ from pydantic import BaseModel, ValidationInfo, field_validator
 
 from app.core import tempo
 from app.models import FormaDePagamentoCobranca, SituacaoCobranca, StatusCobranca
+from app.schemas.cancelamento import CancelamentoLeitura
 from app.schemas.comum import texto_valido
 from app.schemas.matricula import AlunoResumo, exige_data
 from app.schemas.mensalidade import PRIMEIRO_MES_ACEITO, PagamentoEntrada
@@ -114,6 +115,12 @@ class PagamentoDaCobrancaLeitura(BaseModel):
     registrado_em: datetime
 
 
+class PagamentoDaCobrancaCanceladoLeitura(PagamentoDaCobrancaLeitura):
+    """Um pagamento da empresa que foi cancelado: continua visível, com o motivo (RF17)."""
+
+    cancelamento: CancelamentoLeitura
+
+
 class CobrancaLeitura(BaseModel):
     """Cobrança como a API devolve: a empresa, os alunos, a nota e a situação já calculada."""
 
@@ -138,3 +145,5 @@ class CobrancaLeitura(BaseModel):
     motivo: str | None = None
     cancelada_por: str | None = None
     cancelada_em: datetime | None = None
+    # Pagamentos cancelados desta cobrança, do mais recente para o mais antigo (RF17)
+    pagamentos_cancelados: list[PagamentoDaCobrancaCanceladoLeitura] = []
