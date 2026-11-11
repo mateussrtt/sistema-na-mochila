@@ -8,6 +8,7 @@ from sqlalchemy import (
     Index,
     Numeric,
     String,
+    UniqueConstraint,
     func,
     true,
 )
@@ -47,6 +48,15 @@ class Despesa(Base):
     __table_args__ = (
         # RN09: todo lançamento tem valor maior que zero
         CheckConstraint("valor > 0", name="valor_positivo"),
+        # Cancelar exige o motivo, quem fez e quando, tudo junto (RF17, RF26, RN12)
+        CheckConstraint(
+            "(cancelado_em IS NULL AND motivo_cancelamento IS NULL AND cancelado_por_id IS NULL)"
+            " OR (cancelado_em IS NOT NULL AND motivo_cancelamento IS NOT NULL"
+            " AND cancelado_por_id IS NOT NULL)",
+            name="cancelamento_completo",
+        ),
+        # Um lançamento cancelado é corrigido no máximo uma vez
+        UniqueConstraint("substitui_id", name="uq_despesas_substitui_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -60,6 +70,13 @@ class Despesa(Base):
     # Quem registrou e quando (RF26)
     criado_por_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Preenchidos só quando o administrador cancela o lançamento (RF17). Nada é apagado (RN12)
+    cancelado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    motivo_cancelamento: Mapped[str | None] = mapped_column(String(255))
+    cancelado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    # Na correção, o lançamento novo aponta para o que ele substitui (RF17)
+    substitui_id: Mapped[int | None] = mapped_column(ForeignKey("despesas.id"))
 
     categoria: Mapped[CategoriaDespesa] = relationship()
-    criado_por: Mapped[Usuario] = relationship()
+    criado_por: Mapped[Usuario] = relationship(foreign_keys=[criado_por_id])
+    cancelado_por: Mapped[Usuario | None] = relationship(foreign_keys=[cancelado_por_id])

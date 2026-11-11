@@ -431,6 +431,7 @@ def test_resposta_so_traz_o_nome_de_quem_alterou(api, mensalidade):
         "motivo",
         "alterado_por",
         "alterado_em",
+        "pagamentos_cancelados",
     }
 
 

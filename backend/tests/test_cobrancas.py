@@ -1097,7 +1097,12 @@ def test_banco_recusa_dois_pagamentos_ativos_na_mesma_cobranca(api, db, paga):
 
 
 def test_banco_aceita_novo_pagamento_depois_de_cancelar_o_anterior(api, db, paga):
-    db.execute(text("UPDATE pagamentos_cobranca SET cancelado_em = now()"))
+    db.execute(
+        text(
+            "UPDATE pagamentos_cobranca SET cancelado_em = now(),"
+            " motivo_cancelamento = 'Lançado em dobro', cancelado_por_id = criado_por_id"
+        )
+    )
     db.execute(
         text(
             "INSERT INTO pagamentos_cobranca (cobranca_id, data_pagamento, valor_pago,"

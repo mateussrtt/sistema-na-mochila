@@ -112,7 +112,7 @@ def test_a_lista_diz_quem_registrou(api_como, api, mensalidade):
 
 
 def test_a_lista_mostra_so_o_pagamento_ativo(api, db, mensalidade):
-    """Um pagamento cancelado (RF17, no futuro) não conta: vale o que está ativo."""
+    """Um pagamento cancelado (RF17) não conta: vale o que está ativo."""
     usuario_id = db.scalars(select(Mensalidade.criado_por_id)).first()
     cancelado = Pagamento(
         mensalidade_id=mensalidade["id"],
@@ -121,6 +121,8 @@ def test_a_lista_mostra_so_o_pagamento_ativo(api, db, mensalidade):
         forma_pagamento=FormaDePagamento.DINHEIRO,
         criado_por_id=usuario_id,
         cancelado_em=func.now(),
+        motivo_cancelamento="Lançado em dobro",
+        cancelado_por_id=usuario_id,
     )
     ativo = Pagamento(
         mensalidade_id=mensalidade["id"],
@@ -669,8 +671,15 @@ def test_banco_recusa_dois_pagamentos_ativos_da_mesma_mensalidade(db, mensalidad
 
 
 def test_banco_aceita_novo_pagamento_depois_de_um_cancelado(db, mensalidade):
-    """Prepara o RF17: o pagamento cancelado deixa de contar e a mensalidade recebe outro."""
-    nova_linha(db, mensalidade["id"], cancelado_em=func.now())
+    """RF17: o pagamento cancelado deixa de contar e a mensalidade recebe outro."""
+    usuario_id = db.scalars(select(Mensalidade.criado_por_id)).first()
+    nova_linha(
+        db,
+        mensalidade["id"],
+        cancelado_em=func.now(),
+        motivo_cancelamento="Lançado em dobro",
+        cancelado_por_id=usuario_id,
+    )
     nova_linha(db, mensalidade["id"])
     db.flush()
     assert db.scalar(select(func.count()).select_from(Pagamento)) == 2

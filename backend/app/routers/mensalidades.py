@@ -8,7 +8,7 @@ from sqlalchemy import Row, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
-from app.core import tempo
+from app.core import lancamentos, tempo
 from app.core.acesso import LOGADO, PODE_EDITAR, SO_ADMIN, UsuarioLogado
 from app.core.apadrinhamento import Apadrinhado, incluir_apadrinhados
 from app.db.session import get_db
@@ -25,6 +25,7 @@ from app.models import (
     esta_atrasada,
     situacao_da_mensalidade,
 )
+from app.schemas.cancelamento import cancelamento_de
 from app.schemas.comum import ID_MAXIMO, termo_de_busca
 from app.schemas.matricula import AlunoResumo
 from app.schemas.mensalidade import (
@@ -32,13 +33,14 @@ from app.schemas.mensalidade import (
     GeracaoResultado,
     MensalidadeLeitura,
     MotivoEntrada,
+    PagamentoCanceladoLeitura,
     PagamentoEntrada,
     PagamentoLeitura,
     primeiro_dia_do_mes,
 )
 
 # Todas as rotas exigem login. Gerar mensalidades e registrar pagamento exigem perfil de
-# operador ou administrador; isentar e cancelar, só administrador (RN13)
+# operador ou administrador; isentar, cancelar e cancelar pagamento, só administrador (RN13)
 router = APIRouter(prefix="/mensalidades", tags=["mensalidades"], dependencies=[LOGADO])
 
 Banco = Annotated[Session, Depends(get_db)]
@@ -84,8 +86,37 @@ def pagamentos_ativos(db: Session, mensalidades: list[Mensalidade]) -> dict[int,
     return {p.mensalidade_id: p for p in pagamentos}
 
 
+def pagamentos_cancelados(db: Session, ids: list[int]) -> dict[int, list[Pagamento]]:
+    """Os pagamentos cancelados de cada mensalidade, do mais recente para o mais antigo (RF17)."""
+    if not ids:
+        return {}
+    cancelados: dict[int, list[Pagamento]] = {}
+    for pagamento in db.scalars(
+        select(Pagamento)
+        .where(Pagamento.mensalidade_id.in_(ids), Pagamento.cancelado_em.is_not(None))
+        .options(joinedload(Pagamento.criado_por), joinedload(Pagamento.cancelado_por))
+        .order_by(Pagamento.cancelado_em.desc(), Pagamento.id.desc())
+    ):
+        cancelados.setdefault(pagamento.mensalidade_id, []).append(pagamento)
+    return cancelados
+
+
+def pagamento_para_leitura(pagamento: Pagamento) -> PagamentoLeitura:
+    return PagamentoLeitura(
+        data_pagamento=pagamento.data_pagamento,
+        valor_pago=pagamento.valor_pago,
+        forma_pagamento=pagamento.forma_pagamento,
+        observacao=pagamento.observacao,
+        registrado_por=pagamento.criado_por.nome,
+        registrado_em=pagamento.criado_em,
+    )
+
+
 def para_leitura(
-    mensalidade: Mensalidade, hoje: date, pagamento: Pagamento | None = None
+    mensalidade: Mensalidade,
+    hoje: date,
+    pagamento: Pagamento | None = None,
+    cancelados: list[Pagamento] | None = None,
 ) -> MensalidadeLeitura:
     situacao = situacao_da_mensalidade(mensalidade.status, mensalidade.data_vencimento, hoje)
     atraso = (hoje - mensalidade.data_vencimento).days
@@ -104,18 +135,13 @@ def para_leitura(
         motivo=mensalidade.motivo_alteracao,
         alterado_por=mensalidade.alterado_por.nome if mensalidade.alterado_por else None,
         alterado_em=mensalidade.alterado_em,
-        pagamento=(
-            PagamentoLeitura(
-                data_pagamento=pagamento.data_pagamento,
-                valor_pago=pagamento.valor_pago,
-                forma_pagamento=pagamento.forma_pagamento,
-                observacao=pagamento.observacao,
-                registrado_por=pagamento.criado_por.nome,
-                registrado_em=pagamento.criado_em,
+        pagamento=pagamento_para_leitura(pagamento) if pagamento else None,
+        pagamentos_cancelados=[
+            PagamentoCanceladoLeitura(
+                **pagamento_para_leitura(c).model_dump(), cancelamento=cancelamento_de(c)
             )
-            if pagamento
-            else None
-        ),
+            for c in cancelados or []
+        ],
     )
 
 
@@ -165,7 +191,8 @@ def listar(
         consulta = consulta.where(Aluno.nome.icontains(termo, autoescape=True))
     mensalidades = list(db.scalars(consulta))
     pagamentos = pagamentos_ativos(db, mensalidades)
-    return [para_leitura(m, hoje, pagamentos.get(m.id)) for m in mensalidades]
+    cancelados = pagamentos_cancelados(db, [m.id for m in mensalidades])
+    return [para_leitura(m, hoje, pagamentos.get(m.id), cancelados.get(m.id)) for m in mensalidades]
 
 
 @router.post("/gerar", response_model=GeracaoResultado, dependencies=[PODE_EDITAR])
@@ -338,7 +365,8 @@ def registrar_pagamento(
     db.add(pagamento)
     mensalidade.status = StatusMensalidade.PAGA
     db.commit()
-    return para_leitura(mensalidade, tempo.hoje(), pagamento)
+    cancelados = pagamentos_cancelados(db, [mensalidade.id]).get(mensalidade.id)
+    return para_leitura(mensalidade, tempo.hoje(), pagamento, cancelados)
 
 
 MOTIVO_DE_NAO_ALTERAR = {
@@ -393,7 +421,8 @@ def alterar_situacao(
     mensalidade.alterado_por_id = usuario.id
     mensalidade.alterado_em = func.now()
     db.commit()
-    return para_leitura(mensalidade, tempo.hoje())
+    cancelados = pagamentos_cancelados(db, [mensalidade.id]).get(mensalidade.id)
+    return para_leitura(mensalidade, tempo.hoje(), cancelados=cancelados)
 
 
 @router.patch(
@@ -414,3 +443,46 @@ def cancelar(
 ) -> MensalidadeLeitura:
     """Cancela a mensalidade gerada por engano: ela deixa de ser cobrada, mas fica no histórico."""
     return alterar_situacao(db, mensalidade_id, StatusMensalidade.CANCELADA, dados.motivo, usuario)
+
+
+@router.patch(
+    "/{mensalidade_id}/pagamento/cancelar",
+    response_model=MensalidadeLeitura,
+    dependencies=[SO_ADMIN],
+)
+def cancelar_pagamento(
+    mensalidade_id: IdDaMensalidade, dados: MotivoEntrada, db: Banco, usuario: UsuarioLogado
+) -> MensalidadeLeitura:
+    """Cancela o pagamento lançado errado e a mensalidade volta a ficar pendente (RF17).
+
+    O pagamento não é apagado (RN12): fica no histórico da mensalidade, com o motivo. Para
+    corrigir, basta registrar o pagamento certo depois. A mensalidade de aluno apadrinhado é
+    paga pela empresa, e o pagamento dela se cancela na tela de cobranças.
+    """
+    # A linha fica travada até o fim: um cancelamento e um pagamento simultâneos não passam juntos
+    mensalidade = db.scalar(
+        select(Mensalidade).where(Mensalidade.id == mensalidade_id).with_for_update()
+    )
+    if mensalidade is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Mensalidade não encontrada")
+    if mensalidade.cobranca_id is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, FAZ_PARTE_DE_COBRANCA)
+    pagamento = db.scalar(
+        select(Pagamento).where(
+            Pagamento.mensalidade_id == mensalidade.id, Pagamento.cancelado_em.is_(None)
+        )
+    )
+    if mensalidade.status != StatusMensalidade.PAGA or pagamento is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Esta mensalidade não tem pagamento para cancelar"
+        )
+
+    lancamentos.marcar_cancelado(pagamento, dados.motivo, usuario)
+    mensalidade.status = StatusMensalidade.PENDENTE
+    db.commit()
+    return para_leitura(
+        mensalidade,
+        tempo.hoje(),
+        None,
+        pagamentos_cancelados(db, [mensalidade.id]).get(mensalidade.id),
+    )

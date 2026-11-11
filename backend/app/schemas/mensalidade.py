@@ -6,6 +6,7 @@ from pydantic import BaseModel, field_validator
 
 from app.core import tempo
 from app.models import Bolsa, FormaDePagamento, SituacaoMensalidade, StatusMensalidade
+from app.schemas.cancelamento import CancelamentoLeitura
 from app.schemas.comum import texto_valido
 from app.schemas.matricula import AlunoResumo, exige_data
 
@@ -146,27 +147,35 @@ class PagamentoEntrada(BaseModel):
         return texto or None
 
 
+def exige_motivo(valor: object) -> object:
+    if valor is None or (isinstance(valor, str) and not valor.strip()):
+        raise ValueError("Informe o motivo")
+    return valor
+
+
+def motivo_limpo(valor: str) -> str:
+    texto = texto_valido(valor).strip()
+    if len(texto) < MOTIVO_MINIMO:
+        raise ValueError(f"Explique o motivo com pelo menos {MOTIVO_MINIMO} letras")
+    if len(texto) > MOTIVO_MAXIMO:
+        raise ValueError(f"Use no máximo {MOTIVO_MAXIMO} caracteres no motivo")
+    return " ".join(texto.split())
+
+
 class MotivoEntrada(BaseModel):
-    """Motivo informado pelo administrador ao isentar ou cancelar uma mensalidade (RF14)."""
+    """Motivo informado pelo administrador ao isentar, cancelar ou corrigir (RF14, RF17)."""
 
     motivo: str
 
     @field_validator("motivo", mode="before")
     @classmethod
     def exige_motivo(cls, valor: object) -> object:
-        if valor is None or (isinstance(valor, str) and not valor.strip()):
-            raise ValueError("Informe o motivo")
-        return valor
+        return exige_motivo(valor)
 
     @field_validator("motivo")
     @classmethod
     def motivo_limpo(cls, valor: str) -> str:
-        texto = texto_valido(valor).strip()
-        if len(texto) < MOTIVO_MINIMO:
-            raise ValueError(f"Explique o motivo com pelo menos {MOTIVO_MINIMO} letras")
-        if len(texto) > MOTIVO_MAXIMO:
-            raise ValueError(f"Use no máximo {MOTIVO_MAXIMO} caracteres no motivo")
-        return " ".join(texto.split())
+        return motivo_limpo(valor)
 
 
 class PagamentoLeitura(BaseModel):
@@ -178,6 +187,12 @@ class PagamentoLeitura(BaseModel):
     observacao: str | None
     registrado_por: str
     registrado_em: datetime
+
+
+class PagamentoCanceladoLeitura(PagamentoLeitura):
+    """Um pagamento que foi cancelado: continua visível, com o motivo (RF17, RN12)."""
+
+    cancelamento: CancelamentoLeitura
 
 
 class MensalidadeLeitura(BaseModel):
@@ -199,3 +214,5 @@ class MensalidadeLeitura(BaseModel):
     motivo: str | None = None
     alterado_por: str | None = None
     alterado_em: datetime | None = None
+    # Pagamentos cancelados desta mensalidade, do mais recente para o mais antigo (RF17)
+    pagamentos_cancelados: list[PagamentoCanceladoLeitura] = []

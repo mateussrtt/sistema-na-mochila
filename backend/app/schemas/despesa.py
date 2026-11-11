@@ -4,9 +4,10 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.core import tempo
+from app.schemas.cancelamento import CancelamentoLeitura
 from app.schemas.comum import ID_MAXIMO, conferir_dinheiro, ler_dinheiro, texto_valido
 from app.schemas.matricula import exige_data
-from app.schemas.mensalidade import PRIMEIRO_MES_ACEITO
+from app.schemas.mensalidade import PRIMEIRO_MES_ACEITO, exige_motivo, motivo_limpo
 
 NOME_MINIMO = 2
 NOME_MAXIMO = 60
@@ -171,3 +172,35 @@ class DespesaLeitura(BaseModel):
     favorecido: str
     registrado_por: str
     registrado_em: datetime
+    # Lançamento cancelado continua na lista, com o motivo, mas não entra nos totais (RF17)
+    cancelamento: CancelamentoLeitura | None = None
+    # Correção: o lançamento novo aponta para o cancelado que ele substitui, e vice-versa
+    substitui_id: int | None = None
+    substituida_por_id: int | None = None
+
+
+class DespesaCorrecao(DespesaEntrada):
+    """Os dados certos da despesa e o motivo da correção (RF17).
+
+    A despesa errada é cancelada com esse motivo e uma nova é registrada no lugar, apontando para
+    ela.
+    """
+
+    motivo: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def motivo_ausente_vira_vazio(cls, dados: object) -> object:
+        if isinstance(dados, dict):
+            return {"motivo": None} | dados
+        return dados
+
+    @field_validator("motivo", mode="before")
+    @classmethod
+    def exige_o_motivo(cls, valor: object) -> object:
+        return exige_motivo(valor)
+
+    @field_validator("motivo")
+    @classmethod
+    def limpa_o_motivo(cls, valor: str) -> str:
+        return motivo_limpo(valor)

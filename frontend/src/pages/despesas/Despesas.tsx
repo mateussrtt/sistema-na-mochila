@@ -25,6 +25,7 @@ import {
   somarValores,
 } from '../../utils/formato'
 import CategoriasDespesa from './CategoriasDespesa'
+import DetalheDespesa from './DetalheDespesa'
 import FormDespesa from './FormDespesa'
 
 type Modo = 'mes' | 'todos'
@@ -56,6 +57,7 @@ export default function Despesas() {
   const [versao, setVersao] = useState(0)
   const [versaoCategorias, setVersaoCategorias] = useState(0)
   const [registrando, setRegistrando] = useState(false)
+  const [aberta, setAberta] = useState<Despesa | null>(null)
   const [gerenciando, setGerenciando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const buscaAtrasada = useAtraso(busca.trim())
@@ -108,6 +110,11 @@ export default function Despesas() {
     recarregar()
   }
 
+  function aoConcluirDetalhe(mensagem: string, data: string) {
+    setAberta(null)
+    aoRegistrar(mensagem, data)
+  }
+
   function aoMudarCategorias(mensagem: string) {
     setAviso(mensagem)
     // O nome e a situação da categoria aparecem também nas despesas já lançadas
@@ -116,8 +123,11 @@ export default function Despesas() {
 
   const ativas = useMemo(() => (categorias ?? []).filter((c) => c.ativo), [categorias])
 
-  const total = useMemo(() => somarValores((lista ?? []).map((d) => d.valor)), [lista])
-  const porCategoria = useMemo(() => totaisPorCategoria(lista ?? []), [lista])
+  // Despesa cancelada continua na lista, mas não entra nos totais (RF17)
+  const valendo = useMemo(() => (lista ?? []).filter((d) => d.cancelamento === null), [lista])
+  const canceladas = (lista?.length ?? 0) - valendo.length
+  const total = useMemo(() => somarValores(valendo.map((d) => d.valor)), [valendo])
+  const porCategoria = useMemo(() => totaisPorCategoria(valendo), [valendo])
 
   const nomeDoPeriodo = modo === 'mes' ? nomeDoMes(mes) : 'todos os meses'
 
@@ -248,7 +258,7 @@ export default function Despesas() {
             </div>
             <div>
               <dt>Despesas lançadas</dt>
-              <dd>{lista.length}</dd>
+              <dd>{valendo.length}</dd>
             </div>
           </dl>
 
@@ -269,16 +279,26 @@ export default function Despesas() {
           <p className="resumo">
             {plural(lista.length, 'despesa', 'despesas')} em {nomeDoPeriodo}
             {buscaAtrasada && ` para “${buscaAtrasada}”`}
+            {canceladas > 0 &&
+              `, ${plural(canceladas, 'cancelada', 'canceladas')} (fora dos totais)`}
           </p>
           <ul className="lista">
             {lista.map((d) => (
               <li key={d.id}>
-                <div className="linha linha-parada">
+                <button
+                  type="button"
+                  className={`linha linha-parada linha-aberta${d.cancelamento ? ' linha-cancelada' : ''}`}
+                  onClick={() => setAberta(d)}
+                >
                   <Monograma nome={d.favorecido} />
                   <span className="linha-principal">
                     <span className="linha-titulo linha-titulo-quebra">
                       {d.descricao}
                       <span className="etiqueta">{d.categoria.nome}</span>
+                      {d.cancelamento && (
+                        <span className="etiqueta etiqueta-lancamento-cancelado">Cancelada</span>
+                      )}
+                      {d.substitui_id !== null && <span className="etiqueta">Correção</span>}
                     </span>
                     <span className="linha-detalhes">
                       <span>
@@ -294,9 +314,9 @@ export default function Despesas() {
                   </span>
                   <span className="linha-lateral">
                     <span className="linha-rotulo">Valor</span>
-                    <span>{formatarMoeda(d.valor)}</span>
+                    <span className="linha-valor">{formatarMoeda(d.valor)}</span>
                   </span>
-                </div>
+                </button>
               </li>
             ))}
           </ul>
@@ -319,6 +339,27 @@ export default function Despesas() {
               setRegistrando(false)
               setGerenciando(true)
             }}
+          />
+        )}
+      </Gaveta>
+
+      <Gaveta
+        aberta={aberta !== null}
+        titulo="Despesa"
+        descricao={
+          aberta?.cancelamento
+            ? 'Cancelada: continua no histórico, mas não entra nos totais.'
+            : 'Quem registrou e quando. Lançada errada? O administrador corrige ou cancela.'
+        }
+        aoFechar={() => setAberta(null)}
+      >
+        {aberta && (
+          <DetalheDespesa
+            despesa={aberta}
+            categorias={ativas}
+            aoConcluir={aoConcluirDetalhe}
+            aoDesatualizar={recarregar}
+            aoFechar={() => setAberta(null)}
           />
         )}
       </Gaveta>

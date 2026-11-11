@@ -1,23 +1,32 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.acesso import LOGADO, PODE_EDITAR, UsuarioLogado
+from app.core import lancamentos
+from app.core.acesso import LOGADO, PODE_EDITAR, SO_ADMIN, UsuarioLogado
 from app.db.session import get_db
 from app.models import CategoriaReceita, Receita
 from app.routers.mensalidades import mes_do_filtro
+from app.schemas.cancelamento import cancelamento_de
 from app.schemas.comum import ID_MAXIMO, termo_de_busca
-from app.schemas.receita import CategoriaReceitaLeitura, ReceitaEntrada, ReceitaLeitura
+from app.schemas.mensalidade import MotivoEntrada
+from app.schemas.receita import (
+    CategoriaReceitaLeitura,
+    ReceitaCorrecao,
+    ReceitaEntrada,
+    ReceitaLeitura,
+)
 
-# Todas as rotas exigem login. Registrar receita exige perfil de operador ou administrador
+# Todas as rotas exigem login. Registrar receita exige perfil de operador ou administrador;
+# cancelar e corrigir, só administrador (RN13)
 router = APIRouter(prefix="/receitas", tags=["receitas"], dependencies=[LOGADO])
 
 Banco = Annotated[Session, Depends(get_db)]
 
 
-def para_leitura(receita: Receita) -> ReceitaLeitura:
+def para_leitura(receita: Receita, substituida_por_id: int | None = None) -> ReceitaLeitura:
     return ReceitaLeitura(
         id=receita.id,
         data_receita=receita.data_receita,
@@ -27,6 +36,9 @@ def para_leitura(receita: Receita) -> ReceitaLeitura:
         origem=receita.origem,
         registrado_por=receita.criado_por.nome,
         registrado_em=receita.criado_em,
+        cancelamento=cancelamento_de(receita),
+        substitui_id=receita.substitui_id,
+        substituida_por_id=substituida_por_id,
     )
 
 
@@ -65,7 +77,11 @@ def listar(
     """
     consulta = (
         select(Receita)
-        .options(joinedload(Receita.categoria), joinedload(Receita.criado_por))
+        .options(
+            joinedload(Receita.categoria),
+            joinedload(Receita.criado_por),
+            joinedload(Receita.cancelado_por),
+        )
         .order_by(Receita.data_receita.desc(), Receita.id.desc())
     )
     primeiro_dia = mes_do_filtro(mes)
@@ -87,7 +103,9 @@ def listar(
             Receita.descricao.icontains(termo, autoescape=True)
             | Receita.origem.icontains(termo, autoescape=True)
         )
-    return [para_leitura(d) for d in db.scalars(consulta)]
+    lista = list(db.scalars(consulta))
+    corrigidas = lancamentos.substitutos(db, Receita, [d.id for d in lista])
+    return [para_leitura(d, corrigidas.get(d.id)) for d in lista]
 
 
 @router.post(
@@ -115,3 +133,62 @@ def registrar(dados: ReceitaEntrada, db: Banco, usuario: UsuarioLogado) -> Recei
     db.add(receita)
     db.commit()
     return para_leitura(receita)
+
+
+NAO_ENCONTRADA = "Receita não encontrada"
+JA_CANCELADA = "Esta receita já está cancelada"
+
+
+@router.patch("/{receita_id}/cancelar", response_model=ReceitaLeitura, dependencies=[SO_ADMIN])
+def cancelar(
+    receita_id: Annotated[int, Path(gt=0, le=ID_MAXIMO)],
+    dados: MotivoEntrada,
+    db: Banco,
+    usuario: UsuarioLogado,
+) -> ReceitaLeitura:
+    """Cancela a receita lançada errada, com o motivo (RF17). Nada é apagado (RN12): ela continua
+    na lista, marcada como cancelada, e sai dos totais.
+    """
+    receita = lancamentos.travar(db, Receita, receita_id, NAO_ENCONTRADA)
+    if receita.cancelado_em is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, JA_CANCELADA)
+    lancamentos.marcar_cancelado(receita, dados.motivo, usuario)
+    db.commit()
+    db.refresh(receita)
+    return para_leitura(receita, lancamentos.substitutos(db, Receita, [receita.id]).get(receita.id))
+
+
+@router.post(
+    "/{receita_id}/corrigir",
+    response_model=ReceitaLeitura,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[SO_ADMIN],
+)
+def corrigir(
+    receita_id: Annotated[int, Path(gt=0, le=ID_MAXIMO)],
+    dados: ReceitaCorrecao,
+    db: Banco,
+    usuario: UsuarioLogado,
+) -> ReceitaLeitura:
+    """Corrige uma receita: cancela a errada com o motivo e registra a certa no lugar (RF17).
+
+    As duas coisas acontecem juntas: ou as duas, ou nenhuma. A nova receita aponta para a que ela
+    substitui, e quem corrigiu fica registrado nas duas (RF26).
+    """
+    errada = lancamentos.travar(db, Receita, receita_id, NAO_ENCONTRADA)
+    if errada.cancelado_em is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, JA_CANCELADA)
+    categoria = busca_categoria_ativa(db, dados.categoria_id)
+    certa = Receita(
+        data_receita=dados.data_receita,
+        valor=dados.valor,
+        categoria_id=categoria.id,
+        descricao=dados.descricao,
+        origem=dados.origem,
+        criado_por_id=usuario.id,
+        substitui_id=errada.id,
+    )
+    lancamentos.marcar_cancelado(errada, dados.motivo, usuario)
+    db.add(certa)
+    db.commit()
+    return para_leitura(certa)
