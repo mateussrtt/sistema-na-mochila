@@ -6,9 +6,9 @@ import ListaAlunos from './pages/cadastros/ListaAlunos'
 import ListaMatriculas from './pages/cadastros/ListaMatriculas'
 import ListaPadrinhos from './pages/cadastros/ListaPadrinhos'
 import ListaResponsaveis from './pages/cadastros/ListaResponsaveis'
-import EmConstrucao from './pages/EmConstrucao'
 import Entrar from './pages/Entrar'
 import Inicio from './pages/Inicio'
+import Caixa from './pages/caixa/Caixa'
 import Cobrancas from './pages/cobrancas/Cobrancas'
 import Despesas from './pages/despesas/Despesas'
 import Mensalidades from './pages/mensalidades/Mensalidades'
@@ -36,7 +36,7 @@ export default function App() {
           <Route path="cobrancas" element={<Cobrancas />} />
           <Route path="despesas" element={<Despesas />} />
           <Route path="receitas" element={<Receitas />} />
-          <Route path="caixa" element={<EmConstrucao titulo="Saldo e fluxo de caixa" />} />
+          <Route path="caixa" element={<Caixa />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="*" element={<NaoEncontrada />} />
         </Route>
