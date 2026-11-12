@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.core import lancamentos
+from app.core import lancamentos, tempo
 from app.core.acesso import LOGADO, PODE_EDITAR, SO_ADMIN, UsuarioLogado
 from app.db.session import get_db
 from app.models import CategoriaDespesa, Despesa
@@ -86,11 +86,7 @@ def listar(
     )
     primeiro_dia = mes_do_filtro(mes)
     if primeiro_dia is not None:
-        proximo_mes = (
-            primeiro_dia.replace(year=primeiro_dia.year + 1, month=1)
-            if primeiro_dia.month == 12
-            else primeiro_dia.replace(month=primeiro_dia.month + 1)
-        )
+        proximo_mes = tempo.mes_seguinte(primeiro_dia)
         consulta = consulta.where(
             Despesa.data_despesa >= primeiro_dia, Despesa.data_despesa < proximo_mes
         )
