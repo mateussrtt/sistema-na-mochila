@@ -13,3 +13,14 @@ BRASILIA = timezone(timedelta(hours=-3))
 
 def hoje() -> date:
     return datetime.now(BRASILIA).date()
+
+
+def mes_seguinte(primeiro_dia: date) -> date:
+    """O dia 1 do mês seguinte, para usar como limite de um mês: `>= mês` e `< mês seguinte`.
+
+    Em dezembro de 9999 não existe "mês seguinte" no calendário: devolve o último dia possível,
+    em vez de estourar um erro.
+    """
+    if primeiro_dia.month == 12:
+        return date(primeiro_dia.year + 1, 1, 1) if primeiro_dia.year < date.max.year else date.max
+    return primeiro_dia.replace(month=primeiro_dia.month + 1, day=1)
