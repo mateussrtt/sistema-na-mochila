@@ -2315,7 +2315,8 @@ fieldset.gaveta-conteudo {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.totais-detalhe {
+/* `.totais .totais-detalhe` pesa mais que `.totais dd`: a linha de baixo fica pequena e leve */
+.totais .totais-detalhe {
   margin: 2px 0 0;
   font-size: 12.5px;
   font-weight: 400;
@@ -2354,4 +2355,108 @@ fieldset.gaveta-conteudo {
 
 .por-categoria li:has(.origem-nome) {
   align-items: center;
+}
+
+/* ===== Fluxo de caixa (RF20): entradas e saídas por categoria, lado a lado ===== */
+.fluxo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 18px;
+}
+
+.fluxo-lado {
+  padding: 16px 18px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.fluxo-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.fluxo-cabecalho h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tinta-suave);
+}
+
+.fluxo-cabecalho strong {
+  font-weight: 600;
+  color: var(--marinho);
+}
+
+.fluxo-lado ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fluxo-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fluxo-nome {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fluxo-nome .mais {
+  font-size: 12.5px;
+  color: var(--tinta-suave);
+}
+
+.fluxo-linha strong {
+  font-weight: 600;
+  color: var(--marinho);
+  white-space: nowrap;
+}
+
+.fluxo-barra {
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--realce);
+  overflow: hidden;
+}
+
+.fluxo-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.fluxo-entradas .fluxo-barra span {
+  background: var(--agua);
+}
+
+.fluxo-saidas .fluxo-barra span {
+  background: var(--laranja);
+}
+
+.fluxo-vazio {
+  margin: 0;
+  color: var(--tinta-suave);
+}
+
+@media (max-width: 720px) {
+  .fluxo {
+    grid-template-columns: 1fr;
+  }
 }

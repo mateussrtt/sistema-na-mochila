@@ -13,7 +13,15 @@ export type OrigemDaEntrada = Parcela & {
   rotulo: string
 }
 
-/** O caixa de um mês: o que entrou, o que saiu e o saldo (RF19) */
+/** Uma linha do fluxo de caixa: mensalidades, apadrinhamento ou uma categoria (RF20) */
+export type LinhaDoFluxo = Parcela & {
+  origem: 'mensalidades' | 'apadrinhamento' | 'receita' | 'despesa'
+  /** Só as linhas de receita e de despesa têm categoria */
+  categoria_id: number | null
+  nome: string
+}
+
+/** O caixa de um mês: o que entrou, o que saiu, o saldo (RF19) e o fluxo por categoria (RF20) */
 export type Caixa = {
   /** AAAA-MM */
   mes: string
@@ -23,6 +31,9 @@ export type Caixa = {
   saidas: Parcela
   /** Pode ser negativo */
   saldo: string
+  /** Só as linhas com movimento no mês, do maior valor para o menor */
+  entradas_por_categoria: LinhaDoFluxo[]
+  saidas_por_categoria: LinhaDoFluxo[]
 }
 
 /** `mes` no formato AAAA-MM, do mês atual para trás */
