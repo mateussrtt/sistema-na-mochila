@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { consultarCaixa, type Caixa as CaixaDoMes } from '../../api/caixa'
+import ListaDoFluxo from './ListaDoFluxo'
 import { Carregando, FalhaAoCarregar } from '../../components/EstadoLista'
 import {
   formatarMoeda,
@@ -53,8 +54,8 @@ export default function Caixa() {
       <header className="pagina-cabecalho">
         <h1>Caixa</h1>
         <p>
-          O saldo do mês: o que entrou menos o que saiu, contando o dia em que o dinheiro
-          realmente entrou ou saiu.
+          O saldo e o fluxo de caixa do mês: o que entrou e o que saiu, por categoria, contando o
+          dia em que o dinheiro realmente entrou ou saiu.
         </p>
       </header>
 
@@ -110,20 +111,22 @@ export default function Caixa() {
             <p className="resumo">Nenhum dinheiro entrou nem saiu em {nomeDoMes(mes)}.</p>
           )}
 
-          <section className="por-categoria" aria-label="Entradas por origem">
-            <h2>De onde entrou o dinheiro</h2>
-            <ul>
-              {caixa.origens_das_entradas.map((origem) => (
-                <li key={origem.origem}>
-                  <span className="origem-nome">
-                    {origem.rotulo}
-                    <span className="mais">{lancamentos(origem.quantidade)}</span>
-                  </span>
-                  <strong>{formatarMoeda(origem.total)}</strong>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <div className="fluxo">
+            <ListaDoFluxo
+              titulo="De onde entrou o dinheiro"
+              lado="entradas"
+              linhas={caixa.entradas_por_categoria}
+              total={caixa.entradas.total}
+              vazio={`Nada entrou em ${nomeDoMes(mes)}.`}
+            />
+            <ListaDoFluxo
+              titulo="Para onde foi o dinheiro"
+              lado="saidas"
+              linhas={caixa.saidas_por_categoria}
+              total={caixa.saidas.total}
+              vazio={`Nada saiu em ${nomeDoMes(mes)}.`}
+            />
+          </div>
 
           <p className="nota nota-caixa">
             Entra no mês o pagamento recebido nele, mesmo de uma mensalidade de outro mês. Os

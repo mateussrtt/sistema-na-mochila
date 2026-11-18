@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core import tempo
 from app.core.acesso import LOGADO
-from app.core.saldo import saldo_do_mes
+from app.core.fluxo import fluxo_do_mes
 from app.db.session import get_db
 from app.routers.mensalidades import mes_do_filtro
 from app.schemas.caixa import CaixaLeitura, para_leitura
@@ -27,7 +27,8 @@ def erro_no_mes(mensagem: str, mes: str) -> RequestValidationError:
 
 @router.get("", response_model=CaixaLeitura)
 def consultar(db: Banco, mes: Annotated[str | None, Query(max_length=10)] = None) -> CaixaLeitura:
-    """O caixa de um mês: total de entradas, total de saídas e saldo (RF19, RN10).
+    """O caixa de um mês: total de entradas, total de saídas e saldo (RF19, RN10), e o fluxo
+    de caixa, com as entradas e as saídas separadas por categoria (RF20).
 
     `mes` usa o formato AAAA-MM; sem ele, vale o mês atual. Conta o dia em que o dinheiro entrou
     ou saiu e deixa de fora os lançamentos cancelados.
@@ -39,4 +40,4 @@ def consultar(db: Banco, mes: Annotated[str | None, Query(max_length=10)] = None
     if primeiro_dia > atual:
         # Nenhum lançamento pode ter data no futuro (RN09): um mês que ainda não começou é vazio
         raise erro_no_mes("Escolha o mês atual ou um mês anterior", mes or "")
-    return para_leitura(saldo_do_mes(db, primeiro_dia))
+    return para_leitura(fluxo_do_mes(db, primeiro_dia))
