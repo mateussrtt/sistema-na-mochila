@@ -1,5 +1,6 @@
 import {
   Building2,
+  CalendarRange,
   ChartNoAxesColumn,
   HandCoins,
   House,
@@ -17,6 +18,7 @@ import { useCallback, useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
 
 import { NOME_DO_PERFIL } from '../api/auth'
+import logo from '../assets/logo-na-mochila.webp'
 import FormMinhaSenha from '../pages/usuarios/FormMinhaSenha'
 import { useSessao } from '../sessao/contexto'
 import Aviso from './Aviso'
@@ -32,6 +34,7 @@ const menu = [
   { to: '/despesas', rotulo: 'Despesas', Icone: TrendingDown },
   { to: '/receitas', rotulo: 'Receitas', Icone: HandCoins },
   { to: '/caixa', rotulo: 'Caixa', Icone: ChartNoAxesColumn },
+  { to: '/previsao', rotulo: 'Previsão', Icone: CalendarRange },
 ]
 
 export default function Layout() {
@@ -46,9 +49,7 @@ export default function Layout() {
       <aside className={`lateral${menuAberto ? ' aberta' : ''}`}>
         <div className="lateral-topo">
           <NavLink to="/" className="marca" onClick={() => setMenuAberto(false)}>
-            <span className="marca-selo" aria-hidden="true">
-              NM
-            </span>
+            <img className="marca-selo" src={logo} alt="" width={48} height={48} />
             <span className="marca-texto">
               <strong>Na Mochila</strong>
               <span>Gestão financeira</span>
