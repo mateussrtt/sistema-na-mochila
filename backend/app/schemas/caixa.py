@@ -2,7 +2,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from app.core.saldo import Parcela, SaldoDoMes
+from app.core.fluxo import FluxoDoMes, LinhaDoFluxo, Origem
+from app.core.saldo import Parcela
 
 
 class ParcelaLeitura(BaseModel):
@@ -19,6 +20,15 @@ class OrigemLeitura(ParcelaLeitura):
     rotulo: str
 
 
+class LinhaDoFluxoLeitura(ParcelaLeitura):
+    """Uma linha do fluxo de caixa: mensalidades, apadrinhamento ou uma categoria (RF20)."""
+
+    origem: Origem
+    # Só as linhas de receita e de despesa têm categoria
+    categoria_id: int | None
+    nome: str
+
+
 class CaixaLeitura(BaseModel):
     """O caixa de um mês: entradas, saídas e saldo (RF19)."""
 
@@ -29,13 +39,28 @@ class CaixaLeitura(BaseModel):
     origens_das_entradas: list[OrigemLeitura]
     saidas: ParcelaLeitura
     saldo: Decimal
+    # Fluxo de caixa (RF20): só as linhas com movimento no mês, do maior valor para o menor.
+    # A soma de cada lista fecha com o total de entradas e de saídas
+    entradas_por_categoria: list[LinhaDoFluxoLeitura]
+    saidas_por_categoria: list[LinhaDoFluxoLeitura]
 
 
 def _parcela(parcela: Parcela) -> ParcelaLeitura:
     return ParcelaLeitura(total=parcela.total, quantidade=parcela.quantidade)
 
 
-def para_leitura(saldo: SaldoDoMes) -> CaixaLeitura:
+def _linha(linha: LinhaDoFluxo) -> LinhaDoFluxoLeitura:
+    return LinhaDoFluxoLeitura(
+        origem=linha.origem,
+        categoria_id=linha.categoria_id,
+        nome=linha.nome,
+        total=linha.parcela.total,
+        quantidade=linha.parcela.quantidade,
+    )
+
+
+def para_leitura(fluxo: FluxoDoMes) -> CaixaLeitura:
+    saldo = fluxo.saldo
     origens = (
         ("mensalidades", "Mensalidades", saldo.mensalidades),
         ("apadrinhamento", "Apadrinhamento", saldo.apadrinhamento),
@@ -50,4 +75,6 @@ def para_leitura(saldo: SaldoDoMes) -> CaixaLeitura:
         ],
         saidas=_parcela(saldo.saidas),
         saldo=saldo.saldo,
+        entradas_por_categoria=[_linha(linha) for linha in fluxo.entradas],
+        saidas_por_categoria=[_linha(linha) for linha in fluxo.saidas],
     )

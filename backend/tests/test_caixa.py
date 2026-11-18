@@ -166,6 +166,8 @@ def test_mes_sem_nada_zera_tudo(api):
         ],
         "saidas": {"total": "0.00", "quantidade": 0},
         "saldo": "0.00",
+        "entradas_por_categoria": [],
+        "saidas_por_categoria": [],
     }
 
 
@@ -622,7 +624,15 @@ def test_a_resposta_so_traz_totais_sem_dados_pessoais(api, matricula, novo_aluno
 
     texto = str(caixa(api))
 
-    assert set(caixa(api)) == {"mes", "entradas", "origens_das_entradas", "saidas", "saldo"}
+    assert set(caixa(api)) == {
+        "mes",
+        "entradas",
+        "origens_das_entradas",
+        "saidas",
+        "saldo",
+        "entradas_por_categoria",
+        "saidas_por_categoria",
+    }
     for proibido in ("Ana Lima", "Sartori", "Loja Robótica", "Mineração", "@", "Usuário"):
         assert proibido not in texto
 
