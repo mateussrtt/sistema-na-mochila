@@ -118,16 +118,12 @@ a {
 }
 
 .marca-selo {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--laranja);
-  color: var(--marinho);
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.02em;
+  /* A logo do Na Mochila é redonda e já vem sem fundo */
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: contain;
 }
 
 .marca-texto {
@@ -1224,10 +1220,8 @@ input[type='search']::-webkit-search-cancel-button {
 }
 
 .marca-selo-grande {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  font-size: 22px;
+  width: 120px;
+  height: 120px;
 }
 
 .entrar-nome {
@@ -1358,10 +1352,8 @@ fieldset.gaveta-conteudo {
   }
 
   .marca-selo-grande {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    font-size: 17px;
+    width: 64px;
+    height: 64px;
   }
 
   .entrar-nome {
@@ -2459,4 +2451,109 @@ fieldset.gaveta-conteudo {
   .fluxo {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===== Previsão de receita (RF21, RF22) ===== */
+.previsao-atual {
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.previsao-atual header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.previsao-atual h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--marinho);
+}
+
+.previsao-atual header p {
+  margin: 0;
+  color: var(--tinta-suave);
+}
+
+.previsao-atual header strong {
+  color: var(--marinho);
+  font-weight: 600;
+}
+
+.previsao-progresso {
+  display: flex;
+  height: 12px;
+  margin: 14px 0;
+  border-radius: 999px;
+  background: var(--realce);
+  box-shadow: inset 0 0 0 1px var(--linha);
+  overflow: hidden;
+}
+
+.progresso-recebido {
+  background: var(--agua);
+}
+
+.progresso-dispensado {
+  background: var(--linha-forte);
+}
+
+.previsao-numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 32px;
+  margin: 0;
+}
+
+.previsao-numeros dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--tinta-suave);
+}
+
+/* A bolinha liga o número à cor da barra */
+.previsao-numeros dt::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--realce);
+  box-shadow: inset 0 0 0 1px var(--linha-forte);
+}
+
+.numero-recebido dt::before {
+  background: var(--agua);
+  box-shadow: none;
+}
+
+.numero-dispensado dt::before {
+  background: var(--linha-forte);
+  box-shadow: none;
+}
+
+.previsao-numeros dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--marinho);
+}
+
+.previsao-meses {
+  margin-bottom: 18px;
+}
+
+.previsao-meses .fluxo-barra span {
+  background: var(--agua);
+}
+
+.previsao-mes-atual .fluxo-nome {
+  font-weight: 600;
 }

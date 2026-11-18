@@ -18,6 +18,7 @@ from app.routers import (
     mensalidades,
     padrinhos,
     pendencias,
+    previsao,
     receitas,
     responsaveis,
     usuarios,
@@ -69,4 +70,5 @@ app.include_router(matriculas.router, prefix="/api")
 app.include_router(mensalidades.router, prefix="/api")
 app.include_router(padrinhos.router, prefix="/api")
 app.include_router(pendencias.router, prefix="/api")
+app.include_router(previsao.router, prefix="/api")
 app.include_router(usuarios.router, prefix="/api")

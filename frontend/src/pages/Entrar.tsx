@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { ApiError } from '../api/client'
+import logo from '../assets/logo-na-mochila.webp'
 import Campo from '../components/Campo'
 import { useSessao } from '../sessao/contexto'
 import { ligacaoDoCampo } from '../utils/campo'
@@ -50,9 +51,7 @@ export default function Entrar() {
   return (
     <div className="entrar">
       <aside className="entrar-marca">
-        <span className="marca-selo marca-selo-grande" aria-hidden="true">
-          NM
-        </span>
+        <img className="marca-selo marca-selo-grande" src={logo} alt="" width={120} height={120} />
         <div>
           <p className="entrar-nome">Na Mochila</p>
           <p className="entrar-subtitulo">Gestão financeira da associação</p>
