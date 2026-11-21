@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 
 import { API_URL, apiGet, type Health } from '../api/client'
+import ResumoDoMes from './ResumoDoMes'
 
 type Estado = { tipo: 'carregando' } | { tipo: 'ok'; dados: Health } | { tipo: 'erro' }
 
@@ -48,11 +49,10 @@ export default function Inicio() {
     <section className="pagina">
       <header className="pagina-cabecalho">
         <h1>{saudacao()}</h1>
-        <p>
-          Este é o painel financeiro do Na Mochila. O cadastro de alunos, responsáveis e matrículas
-          já está disponível; mensalidades, despesas e caixa chegam nas próximas versões.
-        </p>
+        <p>Veja a situação financeira do mês de relance e abra a tela que detalha cada número.</p>
       </header>
+
+      <ResumoDoMes />
 
       <ul className="atalhos">
         <li>

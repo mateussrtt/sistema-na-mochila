@@ -976,6 +976,131 @@ input[type='search']::-webkit-search-cancel-button {
   }
 }
 
+/* ===== Resumo do mês na tela inicial (RF23) ===== */
+.resumo-mes {
+  margin: 0 0 32px;
+}
+
+.resumo-mes h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--tinta-suave);
+}
+
+.resumo-cartoes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resumo-cartao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--linha);
+  border-radius: 16px;
+  background: var(--superficie);
+  color: var(--tinta);
+  text-decoration: none;
+  box-shadow: var(--sombra);
+}
+
+.resumo-cartao:hover {
+  border-color: var(--marinho);
+}
+
+.resumo-cartao:focus-visible {
+  outline: 3px solid var(--laranja);
+  outline-offset: 2px;
+}
+
+.resumo-cartao .linha-seta {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+}
+
+.resumo-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* O rótulo deixa o canto livre para a seta */
+  padding-right: 22px;
+  font-size: 13px;
+  color: var(--tinta-suave);
+}
+
+/* O valor nunca quebra no meio (nem o sinal de menos fica sozinho numa linha) */
+.resumo-valor {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--marinho);
+  white-space: nowrap;
+}
+
+.resumo-detalhe {
+  font-size: 13px;
+  color: var(--tinta-suave);
+}
+
+.resumo-positivo .resumo-valor {
+  color: var(--agua);
+}
+
+.resumo-atencao .resumo-valor {
+  color: var(--erro);
+}
+
+/* O saldo negativo chama atenção: cartão inteiro em vermelho */
+.resumo-negativo {
+  border-color: var(--erro);
+  background: var(--erro-suave);
+}
+
+.resumo-negativo .resumo-rotulo,
+.resumo-negativo .resumo-detalhe,
+.resumo-negativo .resumo-valor {
+  color: var(--erro);
+}
+
+.resumo-negativo .resumo-detalhe {
+  font-weight: 600;
+}
+
+@media (max-width: 1279px) {
+  .resumo-cartoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .resumo-cartao {
+    padding: 14px;
+  }
+
+  .resumo-cartao .linha-seta {
+    top: 14px;
+    right: 10px;
+  }
+
+  .resumo-valor {
+    font-size: 19px;
+  }
+}
+
+@media (max-width: 380px) {
+  .resumo-cartoes {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ===== Início ===== */
 .atalhos {
   display: grid;
