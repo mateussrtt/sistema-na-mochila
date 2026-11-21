@@ -2557,3 +2557,123 @@ fieldset.gaveta-conteudo {
 .previsao-mes-atual .fluxo-nome {
   font-weight: 600;
 }
+
+/* ===== Período do caixa (RF24) ===== */
+.periodo-barra {
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.periodo-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.periodo-rotulo {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tinta-suave);
+}
+
+.meses-do-periodo {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.meses-do-periodo h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tinta-suave);
+}
+
+.meses-do-periodo ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meses-do-periodo li + li {
+  border-top: 1px solid var(--linha);
+}
+
+.mes-do-periodo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.mes-do-periodo:hover {
+  background: var(--realce);
+}
+
+.mes-do-periodo:focus-visible {
+  outline: 3px solid var(--laranja);
+  outline-offset: -2px;
+}
+
+.mes-nome {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-weight: 500;
+}
+
+.mes-nome .mais {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--tinta-suave);
+}
+
+.mes-valor {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+}
+
+.mes-rotulo {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--tinta-suave);
+}
+
+.mes-saldo.saldo-positivo {
+  color: var(--agua);
+}
+
+.mes-saldo.saldo-negativo {
+  color: var(--erro);
+}
+
+@media (max-width: 600px) {
+  .periodo-barra {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mes-do-periodo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mes-nome {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+}
