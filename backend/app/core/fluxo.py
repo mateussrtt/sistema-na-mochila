@@ -18,7 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core import tempo
-from app.core.saldo import CENTAVO, Parcela, SaldoDoMes, saldo_do_mes
+from app.core.saldo import CENTAVO, Movimento, Parcela, SaldoDoMes, saldo_entre
 from app.models import CategoriaDespesa, CategoriaReceita, Despesa, Receita
 
 Origem = Literal["mensalidades", "apadrinhamento", "receita", "despesa"]
@@ -33,6 +33,15 @@ class LinhaDoFluxo:
     categoria_id: int | None
     nome: str
     parcela: Parcela
+
+
+@dataclass(frozen=True)
+class FluxoDoPeriodo:
+    """O fluxo de um intervalo de datas: o movimento todo e as linhas por categoria (RF20, RF24)."""
+
+    movimento: Movimento
+    entradas: list[LinhaDoFluxo]
+    saidas: list[LinhaDoFluxo]
 
 
 @dataclass(frozen=True)
@@ -67,13 +76,18 @@ def _linhas(origem: Origem, resultado) -> list[LinhaDoFluxo]:
     ]
 
 
-def fluxo_do_mes(db: Session, mes: date) -> FluxoDoMes:
-    """Calcula o fluxo do mês que começa em `mes` (o dia 1)."""
-    de, ate = mes, tempo.mes_seguinte(mes)
-    saldo = saldo_do_mes(db, mes)
+def fluxo_entre(
+    db: Session, de: date, ate: date, movimento: Movimento | None = None
+) -> FluxoDoPeriodo:
+    """Calcula o fluxo das datas de `de` (incluído) até `ate` (excluído), tudo junto.
+
+    Quem já tem o movimento do intervalo pode passá-lo, para não calcular de novo.
+    """
+    if movimento is None:
+        movimento = saldo_entre(db, de, ate)
     sem_categoria = [
-        LinhaDoFluxo("mensalidades", None, "Mensalidades", saldo.mensalidades),
-        LinhaDoFluxo("apadrinhamento", None, "Apadrinhamento", saldo.apadrinhamento),
+        LinhaDoFluxo("mensalidades", None, "Mensalidades", movimento.mensalidades),
+        LinhaDoFluxo("apadrinhamento", None, "Apadrinhamento", movimento.apadrinhamento),
     ]
     receitas = _linhas(
         "receita", _por_categoria(db, Receita, CategoriaReceita, Receita.data_receita, de, ate)
@@ -82,4 +96,12 @@ def fluxo_do_mes(db: Session, mes: date) -> FluxoDoMes:
         "despesa", _por_categoria(db, Despesa, CategoriaDespesa, Despesa.data_despesa, de, ate)
     )
     entradas = [linha for linha in sem_categoria if linha.parcela.quantidade > 0] + receitas
-    return FluxoDoMes(saldo=saldo, entradas=ordenar(entradas), saidas=ordenar(despesas))
+    return FluxoDoPeriodo(movimento, ordenar(entradas), ordenar(despesas))
+
+
+def fluxo_do_mes(db: Session, mes: date) -> FluxoDoMes:
+    """Calcula o fluxo do mês que começa em `mes` (o dia 1)."""
+    fluxo = fluxo_entre(db, mes, tempo.mes_seguinte(mes))
+    return FluxoDoMes(
+        saldo=fluxo.movimento.do_mes(mes), entradas=fluxo.entradas, saidas=fluxo.saidas
+    )

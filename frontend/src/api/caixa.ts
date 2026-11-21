@@ -41,3 +41,40 @@ export function consultarCaixa(mes: string, signal?: AbortSignal) {
   const parametros = new URLSearchParams({ mes })
   return apiGet<Caixa>(`/api/caixa?${parametros}`, signal)
 }
+
+/** O caixa de um dos meses do período, para comparar um mês com o outro (RF24) */
+export type MesDoPeriodo = {
+  /** AAAA-MM */
+  mes: string
+  entradas: Parcela
+  saidas: Parcela
+  /** Pode ser negativo */
+  saldo: string
+}
+
+/** O caixa do período inteiro: os mesmos totais e o mesmo fluxo de um mês, somados */
+export type TotalDoPeriodo = {
+  entradas: Parcela
+  origens_das_entradas: OrigemDaEntrada[]
+  saidas: Parcela
+  saldo: string
+  entradas_por_categoria: LinhaDoFluxo[]
+  saidas_por_categoria: LinhaDoFluxo[]
+}
+
+/** O caixa de um período de até 12 meses: o total e cada mês separado (RF24) */
+export type PeriodoDoCaixa = {
+  /** AAAA-MM */
+  de: string
+  ate: string
+  quantidade_de_meses: number
+  total: TotalDoPeriodo
+  /** Do mês mais antigo ao mais novo, todos os do período, mesmo os sem movimento */
+  meses: MesDoPeriodo[]
+}
+
+/** `de` e `ate` no formato AAAA-MM, do mês atual para trás, no máximo 12 meses */
+export function consultarPeriodo(de: string, ate: string, signal?: AbortSignal) {
+  const parametros = new URLSearchParams({ de, ate })
+  return apiGet<PeriodoDoCaixa>(`/api/caixa/periodo?${parametros}`, signal)
+}
