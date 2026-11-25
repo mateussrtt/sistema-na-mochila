@@ -208,7 +208,7 @@ def gerar(dados: GeracaoEntrada, db: Banco, usuario: UsuarioLogado) -> GeracaoRe
       empresa, que é criada se ainda não existir (RN16, RN18).
     - Se o aluno teve duas matrículas no mesmo mês (saiu e voltou), vale a mais recente: ele
       não é cobrado em dobro.
-    - O vencimento é no dia 10, ou na data de início para quem entrou depois do dia 10.
+    - O vencimento é no dia 15, ou na data de início para quem entrou depois do dia 15.
     - Pode ser chamada de novo para o mesmo mês: só entram as mensalidades que faltam.
     """
     primeiro = dados.competencia

@@ -63,12 +63,12 @@ def test_gera_uma_mensalidade_por_matricula_ativa(api, matricula):
     assert mensalidades[segunda["id"]]["valor"] == "200.00"
 
 
-def test_vencimento_e_no_dia_10_e_comeca_pendente(api, matricula):
+def test_vencimento_e_no_dia_15_e_comeca_pendente(api, matricula):
     matricula()
     gerar(api)
     mensalidade = listar(api, mes="2026-11")[0]
     assert mensalidade["competencia"] == "2026-11-01"
-    assert mensalidade["data_vencimento"] == "2026-11-10"
+    assert mensalidade["data_vencimento"] == "2026-11-15"
     assert mensalidade["status"] == "pendente"
 
 
@@ -260,13 +260,13 @@ def test_gerar_depois_da_saida_cobra_o_mes_da_saida(api, matricula, monkeypatch)
 @pytest.mark.parametrize(
     ("inicio", "vence"),
     [
-        ("2026-10-20", "2026-10-20"),  # entrou depois do dia 10: vence no próprio dia
-        ("2026-10-11", "2026-10-11"),
-        ("2026-10-10", "2026-10-10"),
-        ("2026-10-05", "2026-10-10"),  # entrou antes do dia 10: vence no dia 10
-        ("2026-10-01", "2026-10-10"),
+        ("2026-10-20", "2026-10-20"),  # entrou depois do dia 15: vence no próprio dia
+        ("2026-10-16", "2026-10-16"),
+        ("2026-10-15", "2026-10-15"),
+        ("2026-10-10", "2026-10-15"),  # entrou antes do dia 15: vence no dia 15
+        ("2026-10-01", "2026-10-15"),
         ("2026-10-31", "2026-10-31"),
-        ("2026-01-15", "2026-10-10"),  # matrícula antiga: vence no dia 10
+        ("2026-01-15", "2026-10-15"),  # matrícula antiga: vence no dia 15
     ],
 )
 def test_vencimento_da_primeira_mensalidade(api, matricula, inicio, vence):
@@ -275,13 +275,13 @@ def test_vencimento_da_primeira_mensalidade(api, matricula, inicio, vence):
     assert listar(api, mes="2026-10")[0]["data_vencimento"] == vence
 
 
-def test_vencimento_volta_a_ser_dia_10_no_mes_seguinte(api, matricula):
+def test_vencimento_volta_a_ser_dia_15_no_mes_seguinte(api, matricula):
     matricula(data_inicio="2026-10-20")
     gerar(api, "2026-11")
-    assert listar(api, mes="2026-11")[0]["data_vencimento"] == "2026-11-10"
+    assert listar(api, mes="2026-11")[0]["data_vencimento"] == "2026-11-15"
 
 
-def test_quem_entra_depois_do_dia_10_nao_nasce_atrasado(api, matricula, monkeypatch):
+def test_quem_entra_depois_do_dia_15_nao_nasce_atrasado(api, matricula, monkeypatch):
     matricula(data_inicio="2026-10-20")
     monkeypatch.setattr(tempo, "hoje", lambda: date(2026, 10, 20))
     gerar(api, "2026-10")
@@ -295,9 +295,10 @@ def test_quem_entra_depois_do_dia_10_nao_nasce_atrasado(api, matricula, monkeypa
     ("competencia", "inicio", "esperado"),
     [
         (date(2026, 10, 1), date(2026, 10, 20), date(2026, 10, 20)),
-        (date(2026, 10, 1), date(2026, 10, 10), date(2026, 10, 10)),
-        (date(2026, 10, 1), date(2026, 10, 9), date(2026, 10, 10)),
-        (date(2026, 10, 1), date(2025, 3, 1), date(2026, 10, 10)),
+        (date(2026, 10, 1), date(2026, 10, 16), date(2026, 10, 16)),
+        (date(2026, 10, 1), date(2026, 10, 15), date(2026, 10, 15)),
+        (date(2026, 10, 1), date(2026, 10, 14), date(2026, 10, 15)),
+        (date(2026, 10, 1), date(2025, 3, 1), date(2026, 10, 15)),
         (date(2028, 2, 1), date(2028, 2, 29), date(2028, 2, 29)),  # ano bissexto
     ],
 )
@@ -462,9 +463,9 @@ def test_operador_e_administrador_geram(api_como, matricula, perfil):
     ("hoje", "situacao", "atraso"),
     [
         (date(2026, 11, 1), "a_vencer", 0),
-        (date(2026, 11, 10), "a_vencer", 0),  # o dia 10 ainda é "a vencer" (RN07)
-        (date(2026, 11, 11), "atrasada", 1),  # a partir do dia 11, atrasada
-        (date(2026, 11, 30), "atrasada", 20),
+        (date(2026, 11, 15), "a_vencer", 0),  # o dia 15 ainda é "a vencer" (RN07)
+        (date(2026, 11, 16), "atrasada", 1),  # a partir do dia 16, atrasada
+        (date(2026, 11, 30), "atrasada", 15),
     ],
 )
 def test_situacao_pela_data_de_hoje(api, matricula, monkeypatch, hoje, situacao, atraso):
@@ -510,9 +511,9 @@ def test_paga_isenta_e_cancelada_nunca_aparecem_como_atrasadas(
 @pytest.mark.parametrize(
     ("status", "vencimento", "hoje", "esperada"),
     [
-        (StatusMensalidade.PENDENTE, date(2026, 11, 10), date(2026, 11, 10), "a_vencer"),
-        (StatusMensalidade.PENDENTE, date(2026, 11, 10), date(2026, 11, 11), "atrasada"),
-        (StatusMensalidade.PENDENTE, date(2026, 11, 10), date(2026, 11, 9), "a_vencer"),
+        (StatusMensalidade.PENDENTE, date(2026, 11, 15), date(2026, 11, 15), "a_vencer"),
+        (StatusMensalidade.PENDENTE, date(2026, 11, 15), date(2026, 11, 16), "atrasada"),
+        (StatusMensalidade.PENDENTE, date(2026, 11, 15), date(2026, 11, 14), "a_vencer"),
         (StatusMensalidade.PENDENTE, date(2026, 12, 31), date(2027, 1, 1), "atrasada"),
         (StatusMensalidade.PAGA, date(2020, 1, 10), date(2026, 11, 5), "paga"),
         (StatusMensalidade.ISENTA, date(2020, 1, 10), date(2026, 11, 5), "isenta"),
@@ -523,18 +524,18 @@ def test_regra_da_situacao(status, vencimento, hoje, esperada):
     assert situacao_da_mensalidade(status, vencimento, hoje) == SituacaoMensalidade(esperada)
 
 
-def test_o_dia_10_as_22h_em_brasilia_ainda_nao_esta_atrasada(monkeypatch):
-    """O servidor roda em UTC: 22h30 do dia 10 em Brasília já é dia 11 na hora de lá."""
+def test_o_dia_15_as_22h_em_brasilia_ainda_nao_esta_atrasada(monkeypatch):
+    """O servidor roda em UTC: 22h30 do dia 15 em Brasília já é dia 16 na hora de lá."""
 
     class RelogioFalso(datetime):
         @classmethod
         def now(cls, tz=None):
-            return datetime(2026, 11, 11, 1, 30, tzinfo=UTC).astimezone(tz)
+            return datetime(2026, 11, 16, 1, 30, tzinfo=UTC).astimezone(tz)
 
     monkeypatch.setattr(tempo, "datetime", RelogioFalso)
-    assert RELOGIO_REAL() == date(2026, 11, 10)
+    assert RELOGIO_REAL() == date(2026, 11, 15)
     assert (
-        situacao_da_mensalidade(StatusMensalidade.PENDENTE, date(2026, 11, 10), RELOGIO_REAL())
+        situacao_da_mensalidade(StatusMensalidade.PENDENTE, date(2026, 11, 15), RELOGIO_REAL())
         == SituacaoMensalidade.A_VENCER
     )
 

@@ -34,8 +34,8 @@ def listar(
 ) -> Pendencias:
     """Mensalidades em atraso, agrupadas pelos responsáveis dos alunos (RF12).
 
-    Atrasada é a mensalidade pendente cujo vencimento já passou: no dia 10 ainda não está
-    atrasada, a partir do dia 11 está (RN07). Paga, isenta e cancelada nunca entram.
+    Atrasada é a mensalidade pendente cujo vencimento já passou: no dia 15 ainda não está
+    atrasada, a partir do dia 16 está (RN07). Paga, isenta e cancelada nunca entram.
 
     - `mes` (AAAA-MM) mostra só as mensalidades daquele mês; sem ele, todos os meses.
     - Cada aluno em atraso aparece **uma vez só**. Alunos com exatamente os mesmos
