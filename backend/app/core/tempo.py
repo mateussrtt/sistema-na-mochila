@@ -1,7 +1,7 @@
 """A data de hoje no horário de Brasília.
 
 O servidor roda em UTC. Sem este ajuste, depois das 21h em Brasília o servidor já estaria
-no dia seguinte e uma mensalidade que vence no dia 10 apareceria como atrasada três horas
+no dia seguinte e uma mensalidade que vence no dia 15 apareceria como atrasada três horas
 antes da hora (RN07).
 """
 

@@ -120,7 +120,7 @@ def test_lista_o_responsavel_com_o_aluno_e_o_mes_em_atraso(api):
         }
     ]
     assert grupo["total"] == "150.00"
-    assert grupo["maior_atraso"] == 26  # venceu em 10/10 e hoje é 05/11
+    assert grupo["maior_atraso"] == 21  # venceu em 15/10 e hoje é 05/11
     (do_aluno,) = grupo["alunos"]
     assert do_aluno["id"] == aluno["id"]
     assert do_aluno["nome"] == "Pedro Souza"
@@ -129,22 +129,22 @@ def test_lista_o_responsavel_com_o_aluno_e_o_mes_em_atraso(api):
     (mensalidade,) = do_aluno["mensalidades"]
     assert mensalidade["competencia"] == "2026-10-01"
     assert mensalidade["valor"] == "150.00"
-    assert mensalidade["data_vencimento"] == "2026-10-10"
-    assert mensalidade["dias_em_atraso"] == 26
+    assert mensalidade["data_vencimento"] == "2026-10-15"
+    assert mensalidade["dias_em_atraso"] == 21
 
 
 # ---------- Quando conta como atraso (RN07) ----------
 
 
-def test_no_dia_do_vencimento_ainda_nao_esta_atrasada_e_no_dia_11_esta(api, relogio):
+def test_no_dia_do_vencimento_ainda_nao_esta_atrasada_e_no_dia_16_esta(api, relogio):
     aluno_em_atraso(api)
-    gerar(api, "2026-11")  # vence em 10/11
+    gerar(api, "2026-11")  # vence em 15/11
 
-    relogio["hoje"] = date(2026, 11, 9)
+    relogio["hoje"] = date(2026, 11, 14)
     assert pendencias(api)["grupos"] == []
-    relogio["hoje"] = date(2026, 11, 10)
+    relogio["hoje"] = date(2026, 11, 15)
     assert pendencias(api)["grupos"] == []
-    relogio["hoje"] = date(2026, 11, 11)
+    relogio["hoje"] = date(2026, 11, 16)
     painel = pendencias(api)
     assert painel["resumo"]["mensalidades"] == 1
     assert painel["grupos"][0]["maior_atraso"] == 1
@@ -152,11 +152,11 @@ def test_no_dia_do_vencimento_ainda_nao_esta_atrasada_e_no_dia_11_esta(api, relo
 
 def test_mensalidade_a_vencer_nao_entra(api):
     aluno_em_atraso(api)
-    gerar(api, "2026-11")  # hoje é 05/11, vence dia 10
+    gerar(api, "2026-11")  # hoje é 05/11, vence dia 15
     assert pendencias(api)["resumo"]["mensalidades"] == 0
 
 
-def test_quem_entrou_depois_do_dia_10_so_atrasa_depois_da_data_de_inicio(api, relogio):
+def test_quem_entrou_depois_do_dia_15_so_atrasa_depois_da_data_de_inicio(api, relogio):
     aluno_em_atraso(api, inicio="2026-10-20")
     gerar(api, "2026-10")  # vence em 20/10, a data de início
     relogio["hoje"] = date(2026, 10, 20)
@@ -230,10 +230,10 @@ def test_aluno_com_varios_meses_em_aberto_lista_todos_em_ordem(api, ordem):
     (grupo,) = pendencias(api)["grupos"]
     (aluno,) = grupo["alunos"]
     assert [m["competencia"] for m in aluno["mensalidades"]] == ["2026-09-01", "2026-10-01"]
-    assert [m["dias_em_atraso"] for m in aluno["mensalidades"]] == [56, 26]
+    assert [m["dias_em_atraso"] for m in aluno["mensalidades"]] == [51, 21]
     assert aluno["total"] == "300.00"
     assert grupo["total"] == "300.00"
-    assert grupo["maior_atraso"] == 56
+    assert grupo["maior_atraso"] == 51
 
 
 def test_soma_com_centavos_sem_erro_de_arredondamento(api):
@@ -394,7 +394,7 @@ def test_maior_atraso_do_cartao_e_o_do_aluno_mais_atrasado(api):
     por_nome = {a["nome"]: a for a in grupo["alunos"]}
     assert len(por_nome["Aluno Antigo"]["mensalidades"]) == 2
     assert len(por_nome["Aluno Novo"]["mensalidades"]) == 1
-    assert grupo["maior_atraso"] == 56
+    assert grupo["maior_atraso"] == 51
 
 
 def test_dois_responsaveis_com_o_mesmo_nome_continuam_em_cartoes_separados(api):
@@ -470,7 +470,7 @@ def test_filtra_por_um_mes(api):
     assert painel["resumo"]["mensalidades"] == 1
     (mensalidade,) = painel["grupos"][0]["alunos"][0]["mensalidades"]
     assert mensalidade["competencia"] == "2026-09-01"
-    assert painel["grupos"][0]["maior_atraso"] == 56
+    assert painel["grupos"][0]["maior_atraso"] == 51
 
 
 def test_mes_sem_pendencia_devolve_painel_vazio(api):

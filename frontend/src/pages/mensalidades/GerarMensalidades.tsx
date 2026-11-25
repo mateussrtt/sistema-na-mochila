@@ -41,7 +41,7 @@ export default function GerarMensalidades({ mes, aoGerar, aoCancelar }: Props) {
             saiu durante o mês também é cobrado nele.
           </li>
           <li>
-            O vencimento é no dia 10. Para quem entrou depois do dia 10, vence na data de início.
+            O vencimento é no dia 15. Para quem entrou depois do dia 15, vence na data de início.
           </li>
           <li>Se o aluno saiu e voltou no mesmo mês, vale a matrícula mais recente.</li>
           <li>Quem tem bolsa integral não paga e fica de fora.</li>

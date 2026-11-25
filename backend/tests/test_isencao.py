@@ -75,7 +75,7 @@ def test_nada_e_apagado_e_o_valor_e_o_vencimento_continuam(api, db, mensalidade,
     lista = api.get("/api/mensalidades", params={"mes": "2026-11"}).json()
     assert len(lista) == 1
     assert lista[0]["valor"] == "150.00"
-    assert lista[0]["data_vencimento"] == "2026-11-10"
+    assert lista[0]["data_vencimento"] == "2026-11-15"
     assert lista[0]["competencia"] == "2026-11-01"
     assert db.scalar(select(func.count()).select_from(Mensalidade)) == 1
 

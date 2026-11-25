@@ -20,8 +20,8 @@ from app.db.base import Base
 from app.models.matricula import Matricula
 from app.models.usuario import Usuario
 
-# RN06: a mensalidade vence no dia 10 de cada mês
-DIA_DO_VENCIMENTO = 10
+# RN06: a mensalidade vence no dia 15 de cada mês
+DIA_DO_VENCIMENTO = 15
 
 
 class StatusMensalidade(enum.StrEnum):
@@ -59,7 +59,7 @@ def situacao_da_mensalidade(
 
 
 def data_de_vencimento(competencia: date, data_inicio: date) -> date:
-    """Dia 10 do mês (RN06). Quem entra depois do dia 10 vence na própria data de início.
+    """Dia 15 do mês (RN06). Quem entra depois do dia 15 vence na própria data de início.
 
     Sem isso, a primeira mensalidade já nasceria atrasada no dia da matrícula.
     """

@@ -228,9 +228,9 @@ def test_a_cobranca_da_empresa_nao_entra_no_atraso_dos_responsaveis(api, novo_al
     assert dados["recebido"]["total"] == "300.00"
 
 
-@pytest.mark.parametrize(("hoje", "em_atraso"), [(10, "0.00"), (11, "150.00")])
+@pytest.mark.parametrize(("hoje", "em_atraso"), [(15, "0.00"), (16, "150.00")])
 def test_no_dia_do_vencimento_ainda_nao_esta_atrasada(api, monkeypatch, hoje, em_atraso):
-    """RN07: até o dia 10 está a vencer; a partir do dia 11, atrasada."""
+    """RN07: até o dia 15 está a vencer; a partir do dia 16, atrasada."""
     pend.aluno_em_atraso(api, "Pedro Souza", "150.00", inicio="2026-11-01")
     monkeypatch.setattr(tempo, "hoje", lambda: date(2026, 11, hoje))
     pend.gerar(api, "2026-11")
